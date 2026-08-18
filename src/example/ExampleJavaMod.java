@@ -5,7 +5,9 @@ import arc.util.*;
 import mindustry.game.EventType.*;
 import mindustry.mod.*;
 import mindustry.ui.dialogs.*;
-
+import mindustry.game.Events;
+import mindustry.game.EventType.Trigger;
+import example.world.blocks.BridgeRouter;
 import example.content.GlowItems;
 import example.content.GlowBlocks;
 import example.content.GlowTechTree;
@@ -29,6 +31,6 @@ public class ExampleJavaMod extends Mod {
         GlowItems.load();
         GlowBlocks.load();
         GlowTechTree.load();
-        BridgeRouter.registerEvents();
+        Events.run(Trigger.draw, BridgeRouter.BridgeBuild::drawAllBridges);
     }
 }
