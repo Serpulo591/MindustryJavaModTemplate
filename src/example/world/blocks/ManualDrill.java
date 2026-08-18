@@ -1,8 +1,5 @@
 package example.world.blocks;
 
-import mindustry.world.meta.Category;          // Category 所在包
-import static mindustry.Vars.with;             // with 静态导入
-
 import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Fill;
 import arc.math.Mathf;
@@ -14,6 +11,9 @@ import mindustry.content.Items;
 import mindustry.content.Liquids;
 import mindustry.world.blocks.production.Drill.DrillBuild;
 import example.content.GlowItems;
+
+import static mindustry.Vars.*;
+import static mindustry.type.ItemStack.*;
 
 public class ManualDrill extends Drill {
 
