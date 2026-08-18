@@ -1,5 +1,8 @@
 package example.content;
 
+import mindustry.content.Item;
+import mindustry.type.Category;
+import mindustry.type.ItemStack;
 import mindustry.world.Block;
 import mindustry.world.GlowBlocks.production.Conveyor;
 
@@ -10,7 +13,7 @@ public class GlowBlocks {
 
     public static void load() {
         conveyor1 = new Conveyor("conveyor1"){{
-            requirements(Category.distribution, with(Items.cobalt, 1));
+            requirements(Category.distribution, ItemStack.with(Items.cobalt, 1));
             health = 45;
             speed = 0.06f;
             displayedSpeed = 8.4f;
