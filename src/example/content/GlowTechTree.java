@@ -16,8 +16,19 @@ public class GlowTechTree {
     public static Seq<TechNode> roots = new Seq<>();
     
     public static void load(){
+        addToNext(Items.copper,() ->{
+            node(GlowItems.cobalt,() ->{
+                node(GlowItems.crudeSilicon)
+                node(GlowItems.highCarbonAlloy)
+            });
+        });
         addToNext(Blocks.conveyor,() ->{
-            node(GlowBlocks.conveyor1);
+            node(GlowBlocks.conveyor1,() ->{
+                node(GlowBlocks.highCarbonConveyor)
+            });
+        });
+        addToNext(Blocks.mechanicalDrill,() ->{
+            node(GlowBlocks.vectorDrill)
         });
     }
     
