@@ -1,6 +1,10 @@
 package example.content.blocks.distribution.conveyors;
 
 import mindustry.type.Conveyor;
+import mindustry.world.Block.Category;
+import static mindustry.Vars.with;
+import mindustry.content.Items;
+import example.content.GlowItems;
 
 public class GlowConveyor {
     public static Conveyor
