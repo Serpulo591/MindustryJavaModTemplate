@@ -29,6 +29,7 @@ import mindustry.world.blocks.liquid.*;
 import mindustry.world.blocks.logic.*;
 import mindustry.world.blocks.payloads.*;
 import mindustry.world.blocks.power.*;
+import mindustry.world.blocks.research.*;
 import mindustry.world.blocks.production.*;
 import mindustry.world.blocks.sandbox.*;
 import mindustry.world.blocks.storage.*;
@@ -57,6 +58,7 @@ public class GlowBlocks {
             displayedSpeed = 8.4f;
             buildCostMultiplier = 2;
             researchCost = with(GlowItems.cobalt, 10);
+            research = "conveyor";
         }};
 
         highCarbonConveyor = new Conveyor("high-carbon-conveyor") {{
