@@ -55,7 +55,7 @@ public class GlowBlocks {
             speed = 0.06f;
             displayedSpeed = 8.4f;
             buildCostMultiplier = 2;
-            researchCost = with(Items.cobalt, 10);
+            researchCost = with(GlowItems.cobalt, 10);
         }};
 
         highCarbonConveyor = new Conveyor("high-carbon-conveyor") {{
