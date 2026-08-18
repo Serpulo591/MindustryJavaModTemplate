@@ -5,12 +5,11 @@ import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Fill;
 import arc.math.Mathf;
 import mindustry.gen.Sounds;
-import mindustry.graphics.Pal;
+import mindustry.graphics.*;   // 添加这一行，导入 Fx
 import mindustry.world.blocks.production.Drill;
-import mindustry.type.ItemStack;
+import mindustry.world.blocks.production.Drill.DrillBuild;
 import mindustry.content.Items;
 import mindustry.content.Liquids;
-import mindustry.world.blocks.production.Drill.DrillBuild;
 import example.content.GlowItems;
 import mindustry.world.meta.*;
 
@@ -61,27 +60,18 @@ public class ManualDrill extends Drill {
             super.updateTile();
         }
 
-@Override
-public void tapped() {
-    boostLevel += boostAdd;
-    if (boostLevel > boostMax) boostLevel = boostMax;
+        @Override
+        public void tapped() {
+            boostLevel += boostAdd;
+            if (boostLevel > boostMax) boostLevel = boostMax;
 
-    if (this.power.status <= 0) {
-        emergencyTime = 60;
-    }
+            if (this.power.status <= 0) {
+                emergencyTime = 60;
+            }
 
-    Sounds.click.play();
-
-    // 使用 Effect 播放爆炸特效
-    Effect effect = new Effect(20f, e -> {
-        Draw.color(Pal.accent);
-        Fill.circle(e.x, e.y, 4f);
-        Draw.color(Pal.ammo);
-        Fill.circle(e.x - 3, e.y - 3, 2f);
-        Draw.color(Color.valueOf("ffaa66"));
-        Fill.circle(e.x + 3, e.y + 3, 2f);
-    });
-    effect.at(this.x, this.y);
-}
+            Sounds.click.play();
+            // 使用原版 Fx 特效，和你 JS 代码完全一致
+            Fx.mineSmall.at(this.x, this.y);
+        }
     }
 }
