@@ -1,4 +1,4 @@
-!package example;
+package example;
 
 import arc.*;
 import arc.util.*;
