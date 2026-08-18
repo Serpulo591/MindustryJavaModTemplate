@@ -1,5 +1,6 @@
 package example.content;
 
+import example.world.blocks.ManualDrill;
 import arc.graphics.*;
 import arc.math.*;
 import arc.struct.*;
