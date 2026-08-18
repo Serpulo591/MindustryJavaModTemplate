@@ -1,5 +1,8 @@
 package example.content;
 
+import arc.*;
+import arc.scene.style.*;
+import arc.util.*;
 import arc.func.Boolf;
 import arc.struct.Seq;
 import mindustry.content.TechTree;
