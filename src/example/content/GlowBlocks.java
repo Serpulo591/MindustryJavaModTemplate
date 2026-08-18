@@ -4,9 +4,9 @@ import mindustry.world.Block;
 import mindustry.world.blocks.distribution.Conveyor;
 import mindustry.world.blocks.production.Drill;
 import mindustry.world.meta.Category;
+import mindustry.type.ItemStack;
 import mindustry.content.Items;
 import mindustry.type.Liquids;
-import static mindustry.Vars.with;
 import example.content.GlowItems;
 
 public class GlowBlocks {
@@ -17,23 +17,25 @@ public class GlowBlocks {
 
     public static void load() {
         conveyor1 = new Conveyor("conveyor1") {{
-            requirements(Category.distribution, with(GlowItems.cobalt, 1));
+            requirements(Category.distribution, new ItemStack[]{new ItemStack(GlowItems.cobalt, 1)});
             health = 45;
             speed = 0.06f;
             displayedSpeed = 8.4f;
             buildCostMultiplier = 2;
-            researchCost = with(GlowItems.cobalt, 10);
+            researchCost = new ItemStack[]{new ItemStack(GlowItems.cobalt, 10)};
         }};
 
         highCarbonConveyor = new Conveyor("high-carbon-conveyor") {{
-            requirements(Category.distribution, 
-                with(GlowItems.cobalt, 3, Items.titanium, 2, GlowItems.highCarbonAlloy, 2)
-            );
+            requirements(Category.distribution, new ItemStack[]{
+                new ItemStack(GlowItems.cobalt, 3),
+                new ItemStack(Items.titanium, 2),
+                new ItemStack(GlowItems.highCarbonAlloy, 2)
+            });
             health = 400;
             speed = 0.2036363636f;
             displayedSpeed = 28;
         }};
-        
+
         vectorDrill = new Drill("vector-drill") {{
             researchCostMultiplier = 0.1f;
             size = 2;
@@ -44,7 +46,10 @@ public class GlowBlocks {
             warmupSpeed = 30f;
             itemCapacity = 10;
             liquidCapacity = 38f;
-            requirements(Category.production, with(GlowItems.cobalt, 12, Items.tungsten, 8));
+            requirements(Category.production, new ItemStack[]{
+                new ItemStack(GlowItems.cobalt, 12),
+                new ItemStack(Items.tungsten, 8)
+            });
             consumePower(0.5f);
             consumeLiquid(Liquids.water, 0.065f).boost();
         }};
