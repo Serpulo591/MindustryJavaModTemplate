@@ -29,7 +29,6 @@ import mindustry.world.blocks.liquid.*;
 import mindustry.world.blocks.logic.*;
 import mindustry.world.blocks.payloads.*;
 import mindustry.world.blocks.power.*;
-import mindustry.world.blocks.research.*;
 import mindustry.world.blocks.production.*;
 import mindustry.world.blocks.sandbox.*;
 import mindustry.world.blocks.storage.*;
@@ -41,9 +40,8 @@ import mindustry.world.meta.*;
 import static mindustry.Vars.*;
 import static mindustry.type.ItemStack.*;
 
-// 关键：导入你的自定义物品和游戏内置物品
 import example.content.GlowItems;
-import mindustry.content.Items;   // 游戏内置物品（钛等）
+import mindustry.content.Items;
 
 public class GlowBlocks {
     public static Block
@@ -58,7 +56,6 @@ public class GlowBlocks {
             displayedSpeed = 8.4f;
             buildCostMultiplier = 2;
             researchCost = with(GlowItems.cobalt, 10);
-            research = "conveyor";
         }};
 
         highCarbonConveyor = new Conveyor("high-carbon-conveyor") {{
