@@ -1,4 +1,4 @@
-一package example.world.blocks;
+package example.world.blocks;
 
 import arc.graphics.Color;
 import arc.graphics.g2d.Draw;
