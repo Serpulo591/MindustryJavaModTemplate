@@ -1,12 +1,11 @@
 package example.content;
 
-import mindustry.type.Conveyor;
+import mindustry.world.Block;
 
 public class GlowBlocks {
-    public static Conveyor
-        cobalt,
-        crudeSilicon,
-        highCarbonAlloy;
+    public static Block
+        conveyor1,
+        highCarbonConveyor;
 
     public static void load() {
         conveyor1 = new Conveyor("conveyor1") {{
