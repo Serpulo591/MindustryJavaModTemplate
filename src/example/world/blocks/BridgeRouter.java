@@ -21,7 +21,7 @@ import mindustry.ui.Bar;
 import mindustry.world.blocks.storage.StorageBlock;
 import mindustry.world.meta.Stat;
 import mindustry.world.meta.StatUnit;
-import mindustry.game.EventType.Trigger;
+import mindustry.game.EventType.Events;
 import mindustry.game.Events;
 
 import static mindustry.Vars.*;
@@ -53,7 +53,7 @@ public class BridgeRouter extends StorageBlock {
     public static final Seq<BridgeBuild> activeBridges = new Seq<>();
 
     // 静态初始化：注册绘制事件
-    public static void init() {
+    public static void registerEvents() {
         Events.run(Trigger.draw, BridgeBuild::drawAllBridges);
     }
 
