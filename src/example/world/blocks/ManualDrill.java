@@ -3,6 +3,8 @@ package example.world.blocks;
 import arc.graphics.*;
 import arc.math.*;
 import arc.struct.*;
+import arc.graphics.g2d.Draw;
+import arc.graphics.g2d.Drawf;
 import mindustry.*;
 import mindustry.entities.*;
 import mindustry.entities.abilities.*;
