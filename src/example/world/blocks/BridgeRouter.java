@@ -70,38 +70,32 @@ public class BridgeRouter extends StorageBlock {
         });
 
 config(Integer.class, (BridgeBuild tile, Integer pos) -> {
-    if (pos == tile.pos()) return; // 禁止自连
+    if (pos == tile.pos()) return;
     Seq<Integer> links = tile.getLink();
     if (links == null) links = new Seq<>();
 
-    Building target = world.build(pos);
-    if (!(target instanceof BridgeBuild)) return; // 目标不是桥
-
-    BridgeBuild other = (BridgeBuild) target;
-    Seq<Integer> otherLinks = other.getLink();
-    if (otherLinks == null) otherLinks = new Seq<>();
-
-    // 检查当前桥是否已连接目标
-    boolean currentHas = links.contains(pos);
-    boolean targetHas = otherLinks.contains(tile.pos());
-
-    if (currentHas && targetHas) {
-        // 双向都有，移除（相当于断开）
+    // 如果当前桥已经连接目标 → 断开
+    if (links.contains(pos)) {
         links.remove(pos);
-        otherLinks.remove(tile.pos());
-    } else if (!currentHas && !targetHas) {
-        // 双向都没有，添加（连接）
-        if (links.size >= LINK_LIMIT || otherLinks.size >= LINK_LIMIT) return;
-        links.add(pos);
-        otherLinks.add(tile.pos());
-    } else {
-        // 不一致，修复为断开状态（移除所有）
-        links.remove(pos);
-        otherLinks.remove(tile.pos());
+        tile.setLink(links);
+        return;
     }
 
+    // 否则添加连接（单向）
+    if (links.size >= LINK_LIMIT) return;
+    links.add(pos);
     tile.setLink(links);
-    other.setLink(otherLinks);
+
+    // 如果目标桥的links里有当前桥，移除它（保证单向）
+    Building target = world.build(pos);
+    if (target instanceof BridgeBuild) {
+        BridgeBuild other = (BridgeBuild) target;
+        Seq<Integer> otherLinks = other.getLink();
+        if (otherLinks != null && otherLinks.contains(tile.pos())) {
+            otherLinks.remove(tile.pos());
+            other.setLink(otherLinks);
+        }
+    }
 });
 
         buildType = BridgeBuild::new;
@@ -226,7 +220,7 @@ config(Integer.class, (BridgeBuild tile, Integer pos) -> {
             if (!links.isEmpty() && Time.time % FRAME_DELAY < 1) {
                 for (int i = links.size - 1; i >= 0; i--) {
                     Building target = world.build(links.get(i));
-                    if (!(target instanceof BridgeBuild) || target.team != team || target.block != block || !within(target, range)) {
+                    if (target == null || target.team != team || target.block != block || !within(target, range)) {
                         links.remove(i);
                     }
                 }
@@ -287,7 +281,7 @@ public static void drawAllBridges() {
         for (int j = links.size - 1; j >= 0; j--) {
             int pos = links.get(j);
             Building target = world.build(pos);
-            if (!(target instanceof BridgeBuild) || target.team != bridge.team || target.block != bridge.block) {
+            if (target != null && target.team == team && within(target, range)) {
                 links.remove(j);
                 continue;
             }
