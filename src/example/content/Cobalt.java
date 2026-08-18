@@ -2,7 +2,7 @@ package example;
 
 import mindustry.type.Item;
 
-public class ModItem {
+public class Cobalt {
     public static Item cobalt;
 
     public static void load() {
