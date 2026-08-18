@@ -67,7 +67,7 @@ public class GlowBlocks {
         
         //占位符
         
-        vectorDrill = new Drill("vector-drill") {{
+        vectorDrill = new ManualDrill("vector-drill") {{
             researchCostMultiplier = 0.1f;
             size = 2;
             health = 300;
