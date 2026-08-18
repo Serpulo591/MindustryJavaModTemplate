@@ -11,6 +11,8 @@ import mindustry.content.Items;
 import mindustry.content.Liquids;
 import mindustry.world.blocks.production.Drill.DrillBuild;
 import example.content.GlowItems;
+import mindustry.world.draw.*;
+import mindustry.world.meta.*;
 
 import static mindustry.Vars.*;
 import static mindustry.type.ItemStack.*;
