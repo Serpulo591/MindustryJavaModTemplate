@@ -4,7 +4,7 @@ import mindustry.world.blocks.production.Drill;
 import mindustry.world.meta.Category;
 import mindustry.type.ItemStack;
 import mindustry.content.Items;
-import mindustry.type.Liquids;
+import mindustry.content.Liquids;
 import mindustry.gen.Sounds;
 import mindustry.graphics.Fx;
 import mindustry.math.Mathf;
