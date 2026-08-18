@@ -4,9 +4,8 @@ import mindustry.type.Conveyor;
 
 public class GlowItems {
     public static Conveyor
-        cobalt,
-        crudeSilicon,
-        highCarbonAlloy;
+        conveyor1,
+        highCarbonConveyor;
 
     public static void load() {
         conveyor1 = new Conveyor("conveyor1") {{
