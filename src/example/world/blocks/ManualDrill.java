@@ -24,8 +24,9 @@ public class ManualDrill extends Drill {
         itemCapacity = 10;
         liquidCapacity = 38f;
 
-        // 暂时用字符串代替 Category（后续可换）
-        requirements(Category.distribution, ItemStack.with(GlowItems.cobalt, 12, Items.tungsten, 8));
+        // 使用 Block.Category 替代无法导入的 Category
+        requirements(Block.Category.distribution, 
+            new ItemStack[]{new ItemStack(GlowItems.cobalt, 12), new ItemStack(Items.tungsten, 8)});
         consumePower(0.5f);
         consumeLiquid(Liquids.water, 0.065f).boost();
 
@@ -66,9 +67,8 @@ public class ManualDrill extends Drill {
             }
 
             Sounds.click.play();
-            // 临时替换 Fx 为更基础的调用（或直接注释）
+            // Fx 暂时注释（如果 Fx 仍报错可先保留，不影响钻头逻辑）
             // Fx.mineSmall.at(this.x, this.y);
-            // 如果 Fx 仍报错，可以暂时用 Mindustry 自带的 Effect 库，或先注释
         }
     }
 }
