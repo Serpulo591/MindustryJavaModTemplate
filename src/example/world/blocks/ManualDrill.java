@@ -31,7 +31,7 @@ public class ManualDrill extends Drill {
         warmupSpeed = 30f;
         itemCapacity = 10;
         liquidCapacity = 38f;
-        requirements(Category.production, with(GlowItems.cobalt, 12, Items.tungsten, 8));
+        requirements(Category.production);
         consumePower(0.5f);
         consumeLiquid(Liquids.water, 0.065f).boost();
 
