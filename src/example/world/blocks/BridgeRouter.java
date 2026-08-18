@@ -1,4 +1,4 @@
-package mindustry.world.blocks.distribution;
+package example.world.blocks;
 
 import arc.func.*;
 import arc.graphics.*;
