@@ -1,4 +1,4 @@
-package example.world.blocks;
+一package example.world.blocks;
 
 import arc.graphics.Color;
 import arc.graphics.g2d.Draw;
@@ -61,26 +61,27 @@ public class ManualDrill extends Drill {
             super.updateTile();
         }
 
-        @Override
-        public void tapped() {
-            boostLevel += boostAdd;
-            if (boostLevel > boostMax) boostLevel = boostMax;
+@Override
+public void tapped() {
+    boostLevel += boostAdd;
+    if (boostLevel > boostMax) boostLevel = boostMax;
 
-            if (this.power.status <= 0) {
-                emergencyTime = 60;
-            }
+    if (this.power.status <= 0) {
+        emergencyTime = 60;
+    }
 
-            Sounds.click.play();
+    Sounds.click.play();
 
-            // 点击特效：直接绘制彩色圆点（不依赖任何外部效果类）
-            Draw.color(Pal.accent);
-            Fill.circle(this.x, this.y, 5f);
-            Draw.color(Pal.ammo);
-            Fill.circle(this.x - 4, this.y - 4, 3f);
-            Draw.color(Color.valueOf("ffaa66"));
-            Fill.circle(this.x + 4, this.y + 4, 3f);
-            Draw.color(Color.white);
-            Fill.circle(this.x, this.y, 2f);
-        }
+    // 使用 Effect 播放爆炸特效
+    Effect effect = new Effect(20f, e -> {
+        Draw.color(Pal.accent);
+        Fill.circle(e.x, e.y, 4f);
+        Draw.color(Pal.ammo);
+        Fill.circle(e.x - 3, e.y - 3, 2f);
+        Draw.color(Color.valueOf("ffaa66"));
+        Fill.circle(e.x + 3, e.y + 3, 2f);
+    });
+    effect.at(this.x, this.y);
+}
     }
 }
