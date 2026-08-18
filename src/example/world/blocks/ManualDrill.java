@@ -5,7 +5,7 @@ import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Fill;
 import arc.math.Mathf;
 import mindustry.gen.Sounds;
-import mindustry.graphics.*;   // 添加这一行，导入 Fx
+import mindustry.graphics.Pal;
 import mindustry.world.blocks.production.Drill;
 import mindustry.world.blocks.production.Drill.DrillBuild;
 import mindustry.content.Items;
@@ -42,6 +42,7 @@ public class ManualDrill extends Drill {
         public final float boostAdd = 1f;
         public final float boostMax = 20f;
         public final float boostRecover = 0.02f;
+        public float effectTimer = 0f;
 
         @Override
         public void updateTile() {
@@ -58,6 +59,7 @@ public class ManualDrill extends Drill {
             }
 
             super.updateTile();
+            if (effectTimer > 0) effectTimer -= delta();
         }
 
         @Override
@@ -70,8 +72,25 @@ public class ManualDrill extends Drill {
             }
 
             Sounds.click.play();
-            // 使用原版 Fx 特效，和你 JS 代码完全一致
-            Fx.mineSmall.at(this.x, this.y);
+            effectTimer = 0.5f;
+        }
+
+        @Override
+        public void draw() {
+            super.draw();
+            if (effectTimer > 0) {
+                Draw.z(Layer.max);  // 强制最上层
+                Draw.color(Pal.accent);
+                Fill.circle(this.x, this.y, 6f);
+                Draw.color(Pal.ammo);
+                Fill.circle(this.x - 4, this.y - 4, 4f);
+                Draw.color(Color.valueOf("ffaa66"));
+                Fill.circle(this.x + 4, this.y + 4, 4f);
+                Draw.color(Color.white);
+                Fill.circle(this.x, this.y, 3f);
+                Draw.color();
+                Draw.z(Layer.block); // 恢复
+            }
         }
     }
 }
