@@ -1,18 +1,15 @@
 package example.content;
 
-import arc.*;
-import arc.scene.style.*;
-import arc.util.*;
 import arc.func.Boolf;
 import arc.struct.Seq;
 import mindustry.content.TechTree;
 import mindustry.content.TechTree.TechNode;
-import mindustry.ctype.UnlockableContent;
-import mindustry.game.Objectives;
+import mindustry.UnlockableContent;
+import mindustry.Objectives;
 import mindustry.type.ItemStack;
 import mindustry.content.Blocks.conveyor;
-import mindustry.game.Objectives.*;
-import mindustry.game.SectorPreset;
+import mindustry.Objectives.*;
+import mindustry.SectorPreset;
 
 public class GlowTechTree {
     private static TechNode context = null;
