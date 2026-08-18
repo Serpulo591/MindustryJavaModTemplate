@@ -3,10 +3,9 @@ package example.content;
 import mindustry.world.Block;
 import mindustry.world.blocks.distribution.Conveyor;
 import mindustry.world.blocks.production.Drill;
-import mindustry.world.meta.Category;
 import mindustry.type.ItemStack;
 import mindustry.content.Items;
-import mindustry.type.Liquids;
+import mindustry.content.Liquids;     // 改用 content 包
 import example.content.GlowItems;
 
 public class GlowBlocks {
@@ -17,7 +16,7 @@ public class GlowBlocks {
 
     public static void load() {
         conveyor1 = new Conveyor("conveyor1") {{
-            requirements(Category.distribution, new ItemStack[]{new ItemStack(GlowItems.cobalt, 1)});
+            requirements(Block.Category.distribution, new ItemStack[]{new ItemStack(GlowItems.cobalt, 1)});
             health = 45;
             speed = 0.06f;
             displayedSpeed = 8.4f;
@@ -26,7 +25,7 @@ public class GlowBlocks {
         }};
 
         highCarbonConveyor = new Conveyor("high-carbon-conveyor") {{
-            requirements(Category.distribution, new ItemStack[]{
+            requirements(Block.Category.distribution, new ItemStack[]{
                 new ItemStack(GlowItems.cobalt, 3),
                 new ItemStack(Items.titanium, 2),
                 new ItemStack(GlowItems.highCarbonAlloy, 2)
@@ -46,7 +45,7 @@ public class GlowBlocks {
             warmupSpeed = 30f;
             itemCapacity = 10;
             liquidCapacity = 38f;
-            requirements(Category.production, new ItemStack[]{
+            requirements(Block.Category.production, new ItemStack[]{
                 new ItemStack(GlowItems.cobalt, 12),
                 new ItemStack(Items.tungsten, 8)
             });
