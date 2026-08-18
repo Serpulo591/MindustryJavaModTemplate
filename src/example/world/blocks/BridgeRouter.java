@@ -160,7 +160,6 @@ public class BridgeBuild extends StorageBuild {
         return !links.isEmpty();
     }
 
-    @Override
     public void updateEfficiency() {
         efficiency = Mathf.lerpDelta(efficiency, shouldConsume() ? 1f : 0f, warmupSpeed);
     }
