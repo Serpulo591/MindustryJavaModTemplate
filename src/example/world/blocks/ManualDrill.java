@@ -1,4 +1,4 @@
-package example.content;
+package example.world.blocks;
 
 import mindustry.world.blocks.production.Drill;
 import mindustry.world.meta.Category;
