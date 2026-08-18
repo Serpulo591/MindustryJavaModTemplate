@@ -5,7 +5,7 @@ import mindustry.world.Block;
 public class GlowBlocks {
     public static Block
         conveyor1,
-        highCarbonConveyor;
+        highCarbonConveyor,
         vectorDrill;
 
     public static void load() {
