@@ -18,17 +18,17 @@ public class GlowTechTree {
     public static void load(){
         addToNext(Items.copper,() ->{
             node(GlowItems.cobalt,() ->{
-                node(GlowItems.crudeSilicon)
-                node(GlowItems.highCarbonAlloy)
+                node(GlowItems.crudeSilicon);
+                node(GlowItems.highCarbonAlloy);
             });
         });
         addToNext(Blocks.conveyor,() ->{
             node(GlowBlocks.conveyor1,() ->{
-                node(GlowBlocks.highCarbonConveyor)
+                node(GlowBlocks.highCarbonConveyor);
             });
         });
         addToNext(Blocks.mechanicalDrill,() ->{
-            node(GlowBlocks.vectorDrill)
+            node(GlowBlocks.vectorDrill);
         });
     }
     
