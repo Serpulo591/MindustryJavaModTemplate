@@ -69,25 +69,36 @@ public class BridgeRouter extends StorageBlock {
             tile.setLink(links);
         });
 
-        config(Integer.class, (BridgeBuild tile, Integer pos) -> {
-            Seq<Integer> links = tile.getLink();
-            if (links.contains(pos)) {
-                links.remove(pos);
-            } else {
-                if (links.size >= LINK_LIMIT) return;
-                links.add(pos);
-                Building target = world.build(pos);
-                if (target instanceof BridgeBuild && target.block == this) {
-                    BridgeBuild other = (BridgeBuild) target;
-                    Seq<Integer> otherLinks = other.getLink();
-                    if (otherLinks.contains(tile.pos())) {
-                        otherLinks.remove(tile.pos());
-                        other.setLink(otherLinks);
-                    }
-                }
+config(Integer.class, (BridgeBuild tile, Integer pos) -> {
+    Seq<Integer> links = tile.getLink();
+    if (links.contains(pos)) {
+        // 移除当前桥到目标桥的链接
+        links.remove(pos);
+        // 同时移除目标桥到当前桥的链接（反向清理）
+        Building target = world.build(pos);
+        if (target instanceof BridgeBuild && target.block == tile.block) {
+            BridgeBuild other = (BridgeBuild) target;
+            Seq<Integer> otherLinks = other.getLink();
+            if (otherLinks.contains(tile.pos())) {
+                otherLinks.remove(tile.pos());
+                other.setLink(otherLinks);
             }
-            tile.setLink(links);
-        });
+        }
+    } else {
+        if (links.size >= LINK_LIMIT) return;
+        links.add(pos);
+        Building target = world.build(pos);
+        if (target instanceof BridgeBuild && target.block == tile.block) {
+            BridgeBuild other = (BridgeBuild) target;
+            Seq<Integer> otherLinks = other.getLink();
+            if (otherLinks.contains(tile.pos())) {
+                otherLinks.remove(tile.pos());
+                other.setLink(otherLinks);
+            }
+        }
+    }
+    tile.setLink(links);
+});
 
         buildType = BridgeBuild::new;
     }
@@ -169,6 +180,7 @@ public class BridgeRouter extends StorageBlock {
 
         @Override
         public void updateTile() {
+            efficiency = Mathf.lerpDelta(efficiency, shouldConsume() ? 1f : 0f, warmupSpeed);
             for (int i = transport.size - 1; i >= 0; i--) {
                 TransportData t = transport.get(i);
                 if (--t.time <= 0) {
