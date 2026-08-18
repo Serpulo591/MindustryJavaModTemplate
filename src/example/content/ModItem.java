@@ -1,3 +1,5 @@
+import mindustry.type.Item;
+
 public class ModItem {   // ← 这栋“房子”必须存在
     public static Item cobalt;
 
