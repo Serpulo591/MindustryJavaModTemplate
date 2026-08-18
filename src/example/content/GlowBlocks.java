@@ -47,6 +47,7 @@ public class GlowBlocks {
     public static Block
         conveyor1,
         highCarbonConveyor,
+        warpBridge,
         vectorDrill;
 
     public static void load() {
@@ -65,6 +66,17 @@ public class GlowBlocks {
             speed = 0.2036363636f;
             displayedSpeed = 28;
         }};
+
+warpBridge = new BridgeRouter("warp-bridge") {{
+    size = 1;
+    health = 350;
+    hasItems = true;
+    configurable = true;
+    itemCapacity = 10;
+    displayItems = false;
+    consumePower(0.4f);
+    requirements(Category.distribution, with(GlowItems.cobalt, 12, Items.tungsten, 8));
+}};
         
         //占位符
         
