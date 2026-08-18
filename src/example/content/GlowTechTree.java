@@ -7,6 +7,9 @@ import mindustry.content.TechTree.TechNode;
 import mindustry.ctype.UnlockableContent;
 import mindustry.game.Objectives;
 import mindustry.type.ItemStack;
+import static mindustry.content.Blocks.conveyor;
+import mindustry.game.Objectives.*;
+import mindustry.game.SectorPreset;
 
 public class GlowTechTree {
     private static TechNode context = null;
@@ -20,12 +23,7 @@ public class GlowTechTree {
     }
     
     public static void addToNext(UnlockableContent content, Runnable run){
-        TechTree.all.find(new Boolf<TechNode>(){
-            @Override
-            public boolean get(TechNode t){
-                return t.content == content;
-            }
-        });
+        context = TechTree.all.find(t -> t.content == content);
         run.run();
     }
     
