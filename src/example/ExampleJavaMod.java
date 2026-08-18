@@ -10,11 +10,11 @@ import example.content.GlowItems;
 
 public class ExampleJavaMod extends Mod{
     public ExampleJavaMod(){
-        Events.on(ClientLoadEvent.class, e -> {
+        Events.on(EventType.ClientLoadEvent.class, e-> {
             Time.run(delay: 10f, () -> {
-                BaseDialog dialog = new BaseDialog(title:"可以去你家里嘛>w<");
-                dialog.cont.add("可以看到");
-                Time.run(delay:100f, dialog::addCloseButton);
+                BaseDialog dialog = new BaseDialog(title: "Welcome");
+                dialog.cont.add("No Welcome");
+                Time.run(delay: 100f, dialog::addCloseButton);
                 dialog.show();
             });
         });
@@ -24,5 +24,4 @@ public class ExampleJavaMod extends Mod{
     public void loadContent(){
         GlowItems.load();
     }
-
 }
