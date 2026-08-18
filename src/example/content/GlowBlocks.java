@@ -50,7 +50,7 @@ public class GlowBlocks {
 
     public static void load() {
         conveyor1 = new Conveyor("conveyor1") {{
-            requirements(Category.distribution, with(Items.cobalt, 1));
+            requirements(Category.distribution, with(GlowItems.cobalt, 1));
             health = 45;
             speed = 0.06f;
             displayedSpeed = 8.4f;
@@ -59,7 +59,7 @@ public class GlowBlocks {
         }};
 
         highCarbonConveyor = new Conveyor("high-carbon-conveyor") {{
-            requirements(Category.distribution, with(Items.cobalt, 3, Items.titanium, 2, Items.high-carbon-alloy, 2));
+            requirements(Category.distribution, with(GlowItems.cobalt, 3, Items.titanium, 2, GlowItems.highCarbonAlloy, 2));
             health = 400;
             speed = 0.2036363636f;
             displayedSpeed = 28;
@@ -77,7 +77,7 @@ public class GlowBlocks {
             warmupSpeed = 30f;
             itemCapacity = 10;
             liquidCapacity = 38f;
-            requirements(Category.production, with(Items.cobalt, 12, Items.tungsten, 8));
+            requirements(Category.production, with(GlowItems.cobalt, 12, Items.tungsten, 8));
             consumePower(0.5f);
             consumeLiquid(Liquids.water, 0.065f).boost();
         }};
