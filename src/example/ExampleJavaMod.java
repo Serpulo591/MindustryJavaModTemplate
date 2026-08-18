@@ -28,5 +28,6 @@ public class ExampleJavaMod extends Mod {
         GlowItems.load();
         GlowBlocks.load();
         GlowTechTree.load();
+        BridgeRouter.registerEvents();
     }
 }
