@@ -1,4 +1,4 @@
-package example;
+!package example;
 
 import arc.*;
 import arc.util.*;
@@ -7,6 +7,8 @@ import mindustry.mod.*;
 import mindustry.ui.dialogs.*;
 
 import example.content.GlowItems;
+import example.content.GlowBlocks;
+
 
 public class ExampleJavaMod extends Mod {
     public ExampleJavaMod() {
