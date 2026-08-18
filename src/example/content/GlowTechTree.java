@@ -27,7 +27,7 @@ public class GlowTechTree {
     }
     
     public static TechNode nodeRoot(String name, UnlockableContent content, Runnable children){
-        return nodeRoot(name, content, requireUnlock: false, children);
+        return nodeRoot(name, content, false, children);   // 修正：直接传 false
     }
 
     public static TechNode nodeRoot(String name, UnlockableContent content, boolean requireUnlock, Runnable children){
@@ -43,10 +43,10 @@ public class GlowTechTree {
     }
 
     public static TechNode node(UnlockableContent content, ItemStack[] requirements, Runnable children){
-        return node(content, requirements, (Seq)null, children);
+        return node(content, requirements, (Seq<Objectives.Objective>)null, children);
     }
 
-    public static TechNode node(UnlockableContent content, ItemStack[] requirements, Seq<Objective.Objective> objectives, Runnable children){
+    public static TechNode node(UnlockableContent content, ItemStack[] requirements, Seq<Objectives.Objective> objectives, Runnable children){
         TechNode node = new TechNode(context, content, requirements);
         if(objectives != null){
             node.objectives.addAll(objectives);
@@ -59,21 +59,20 @@ public class GlowTechTree {
         return node;
     }
 
-    public static TechNode node(UnlockableContent content, Seq<Objective> objectives, Runnable children){
+    public static TechNode node(UnlockableContent content, Seq<Objectives.Objective> objectives, Runnable children){
         return node(content, content.researchRequirements(), objectives, children);
     }
 
     public static TechNode node(UnlockableContent block){
-        return node(block, () -> {
-        });
+        return node(block, () -> {});
     }
 
-    public static TechNode nodeProduce(UnlockableContent content, Seq<Objective.Objective> objectives, Runnable children){
-        return node(content, content.researchRequirements(), objectives.add(new Objective.Produce(content)), children);
+    public static TechNode nodeProduce(UnlockableContent content, Seq<Objectives.Objective> objectives, Runnable children){
+        return node(content, content.researchRequirements(), objectives.add(new Objectives.Produce(content)), children);
     }
 
     public static TechNode nodeProduce(UnlockableContent content, Runnable children){
-        return nodeProduce(content, new Seq(), children);
+        return nodeProduce(content, new Seq<>(), children);
     }
 
     public static TechNode nodeProduce(UnlockableContent content){
