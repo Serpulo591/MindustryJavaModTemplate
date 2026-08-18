@@ -3,6 +3,7 @@ package example.content;
 import arc.graphics.*;
 import arc.math.*;
 import arc.struct.*;
+import arc.func.Prov;   // 新增
 import mindustry.*;
 import mindustry.entities.*;
 import mindustry.entities.abilities.*;
@@ -64,9 +65,7 @@ public class GlowBlocks {
             speed = 0.2036363636f;
             displayedSpeed = 28;
         }};
-        
-        //占位符
-        
+
         vectorDrill = new Drill("vector-drill") {{
             researchCostMultiplier = 0.1f;
             size = 2;
@@ -80,6 +79,48 @@ public class GlowBlocks {
             requirements(Category.production, with(GlowItems.cobalt, 12, Items.tungsten, 8));
             consumePower(0.5f);
             consumeLiquid(Liquids.water, 0.065f).boost();
+
+            // ★★★ 挂载自定义逻辑 ★★★
+            buildType = () -> new VectorDrillBuild();
         }};
+    }
+
+    // ====== 自定义钻头建筑逻辑（JS 转 Java） ======
+    public static class VectorDrillBuild extends Drill.DrillBuild {
+        public float boostLevel = 1f;
+        public int emergencyTime = 0;
+        public final float boostAdd = 1f;
+        public final float boostMax = 20f;
+        public final float boostRecover = 0.02f;
+
+        @Override
+        public void updateTile() {
+            if (boostLevel > 1f) {
+                boostLevel = Mathf.lerpDelta(boostLevel, 1f, boostRecover);
+            }
+            this.timeScale = boostLevel;
+
+            if (emergencyTime > 0) {
+                emergencyTime--;
+                if (this.power.status <= 0) {
+                    this.efficiency = 1f;
+                }
+            }
+
+            super.updateTile();
+        }
+
+        @Override
+        public void tapped() {
+            boostLevel += boostAdd;
+            if (boostLevel > boostMax) boostLevel = boostMax;
+
+            if (this.power.status <= 0) {
+                emergencyTime = 60;
+            }
+
+            Sounds.click.play();
+            Fx.mineSmall.at(this.x, this.y);
+        }
     }
 }
