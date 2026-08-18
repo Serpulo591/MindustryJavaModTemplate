@@ -28,9 +28,9 @@ public class ManualDrill extends Drill {
         tier = 100;
         drillTime = 180;
         canOverdrive = true;
-        warmupSpeed = 30;
+        warmupSpeed = 30f;
         itemCapacity = 10;
-        liquidCapacity = 38;
+        liquidCapacity = 38f;
         consumePower(0.5f);
         consumeLiquid(Liquids.water, 0.065f).boost();
 
