@@ -1,5 +1,6 @@
 package example.world.blocks;
 
+import mindustry.world.meta.Category;
 import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Fill;
 import arc.math.Mathf;
