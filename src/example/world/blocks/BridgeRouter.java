@@ -21,8 +21,8 @@ import mindustry.ui.Bar;
 import mindustry.world.blocks.storage.StorageBlock;
 import mindustry.world.meta.Stat;
 import mindustry.world.meta.StatUnit;
-import mindustry.game.EventType.Events;
 import mindustry.game.Events;
+import mindustry.game.EventType.Trigger;
 
 import static mindustry.Vars.*;
 
