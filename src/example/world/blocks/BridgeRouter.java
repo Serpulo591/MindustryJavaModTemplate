@@ -1,8 +1,8 @@
 package example.world.blocks;
 
-import mindustry.Core;
+import arc.Core;
+import arc.struct.IntSeq;
 import mindustry.graphics.Drawf;
-import mindustry.gen.IntSeq;
 import arc.graphics.Color;
 import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Fill;
@@ -514,8 +514,8 @@ private static void drawMovingArrow(Building from, Building to, Color color, flo
             Seq<Integer> out = new Seq<>(links.size * 2);
             for (int i = 0; i < links.size; i++) {
                 Point2 p = Point2.unpack(links.get(i)).sub(tile.x, tile.y);
-                out.add(point.x);
-                out.add(point.y);
+                out.add(p.x);
+                out.add(p.y);
             }
             return out;
         }
