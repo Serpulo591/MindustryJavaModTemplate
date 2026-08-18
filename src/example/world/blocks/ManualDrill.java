@@ -89,18 +89,24 @@ public class ManualDrill extends Drill {
             super.updateTile();
         }
 
-        @Override
-        public void tapped() {
-            boostLevel += boostAdd;
-            if (boostLevel > boostMax) boostLevel = boostMax;
+@Override
+public void tapped() {
+    boostLevel += boostAdd;
+    if (boostLevel > boostMax) boostLevel = boostMax;
 
-            if (this.power.status <= 0) {
-                emergencyTime = 60;
-            }
+    if (this.power.status <= 0) {
+        emergencyTime = 60;
+    }
 
-            Sounds.click.play();
-            // 如果 Fx 仍报错，可注释掉这行
-            Fx.mineSmall.at(this.x, this.y);
-        }
+    Sounds.click.play();
+
+    // 自定义点击特效（替代 Fx.mineSmall）
+    Effect spark = new Effect(20f, e -> {
+        Draw.color(Pal.accent);
+        Drawf.tri(e.x, e.y, 4f, 4f, 10f);
+        Drawf.tri(e.x - 2, e.y - 2, 3f, 3f, -8f);
+    });
+    spark.at(this.x, this.y);
+}
     }
 }
