@@ -138,7 +138,7 @@ public class BridgeRouter extends StorageBlock {
             int time;
         }
 
-        public Seq<Integer> getLink() { return links; }
+        public Seq<Integer> getLink() { return links == null ? new Seq<>() : links; }
         public void setLink(Seq<Integer> v) {
             if (v == null) links = new Seq<>();
             else links = v;
