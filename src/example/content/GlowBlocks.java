@@ -1,6 +1,7 @@
 package example.content;
 
 import mindustry.world.Block;
+import mindustry.world.GlowBlocks.production.Conveyor;
 
 public class GlowBlocks {
     public static Block
@@ -8,7 +9,7 @@ public class GlowBlocks {
         highCarbonConveyor;
 
     public static void load() {
-        conveyor1 = new Conveyor("conveyor1") {{
+        conveyor1 = new Conveyor("conveyor1"){{
             requirements(Category.distribution, with(Items.cobalt, 1));
             health = 45;
             speed = 0.06f;
@@ -17,7 +18,7 @@ public class GlowBlocks {
             researchCost = with(Items.cobalt, 10);
         }};
 
-        highCarbonConveyor = new Conveyor("high-carbon-conveyor") {{
+        highCarbonConveyor = new Conveyor("high-carbon-conveyor"){{
             requirements(Category.distribution, with(Items.cobalt, 3, Items.titanium, 2, Items.high-carbon-alloy, 2));
             health = 400;
             speed = 0.2036363636f;
