@@ -7,7 +7,7 @@ import mindustry.content.TechTree.TechNode;
 import mindustry.ctype.UnlockableContent;
 import mindustry.game.Objectives;
 import mindustry.type.ItemStack;
-import static mindustry.content.Blocks.conveyor;
+import mindustry.content.Blocks.conveyor;
 import mindustry.game.Objectives.*;
 import mindustry.game.SectorPreset;
 
