@@ -40,23 +40,29 @@ import mindustry.world.meta.*;
 import static mindustry.Vars.*;
 import static mindustry.type.ItemStack.*;
 
+// 关键：导入你的自定义物品和游戏内置物品
+import example.content.GlowItems;
+import mindustry.content.Items;   // 游戏内置物品（钛等）
+
 public class GlowBlocks {
     public static Block
         conveyor1,
         highCarbonConveyor;
 
     public static void load() {
-        conveyor1 = new Conveyor("conveyor1"){{
-            requirements(Category.distribution, ItemStack.with(Items.cobalt, 1));
+        conveyor1 = new Conveyor("conveyor1") {{
+            requirements(Category.distribution, with(GlowItems.cobalt, 1));
             health = 45;
             speed = 0.06f;
             displayedSpeed = 8.4f;
             buildCostMultiplier = 2;
-            researchCost = ItemStack.with(Items.cobalt, 10);
+            researchCost = with(GlowItems.cobalt, 10);
         }};
 
-        highCarbonConveyor = new Conveyor("high-carbon-conveyor"){{
-            requirements(Category.distribution, ItemStack.with(Items.cobalt, 3, Items.titanium, 2, Items.high-carbon-alloy, 2));
+        highCarbonConveyor = new Conveyor("high-carbon-conveyor") {{
+            requirements(Category.distribution,
+                with(GlowItems.cobalt, 3, Items.titanium, 2, GlowItems.highCarbonAlloy, 2)
+            );
             health = 400;
             speed = 0.2036363636f;
             displayedSpeed = 28;
