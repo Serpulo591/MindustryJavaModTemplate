@@ -37,6 +37,9 @@ import mindustry.world.consumers.*;
 import mindustry.world.draw.*;
 import mindustry.world.meta.*;
 
+import static mindustry.Vars.*;
+import static mindustry.type.ItemStack.*;
+
 public class GlowBlocks {
     public static Block
         conveyor1,
@@ -49,11 +52,11 @@ public class GlowBlocks {
             speed = 0.06f;
             displayedSpeed = 8.4f;
             buildCostMultiplier = 2;
-            researchCost = with(Items.cobalt, 10);
+            researchCost = ItemStack.with(Items.cobalt, 10);
         }};
 
         highCarbonConveyor = new Conveyor("high-carbon-conveyor"){{
-            requirements(Category.distribution, with(Items.cobalt, 3, Items.titanium, 2, Items.high-carbon-alloy, 2));
+            requirements(Category.distribution, ItemStack.with(Items.cobalt, 3, Items.titanium, 2, Items.high-carbon-alloy, 2));
             health = 400;
             speed = 0.2036363636f;
             displayedSpeed = 28;
