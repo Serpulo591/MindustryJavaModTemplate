@@ -70,34 +70,38 @@ public class BridgeRouter extends StorageBlock {
         });
 
 config(Integer.class, (BridgeBuild tile, Integer pos) -> {
+    if (pos == tile.pos()) return; // 禁止自连
     Seq<Integer> links = tile.getLink();
-    if (links.contains(pos)) {
-        // 移除当前桥到目标桥的链接
+    if (links == null) links = new Seq<>();
+
+    Building target = world.build(pos);
+    if (!(target instanceof BridgeBuild)) return; // 目标不是桥
+
+    BridgeBuild other = (BridgeBuild) target;
+    Seq<Integer> otherLinks = other.getLink();
+    if (otherLinks == null) otherLinks = new Seq<>();
+
+    // 检查当前桥是否已连接目标
+    boolean currentHas = links.contains(pos);
+    boolean targetHas = otherLinks.contains(tile.pos());
+
+    if (currentHas && targetHas) {
+        // 双向都有，移除（相当于断开）
         links.remove(pos);
-        // 同时移除目标桥到当前桥的链接（反向清理）
-        Building target = world.build(pos);
-        if (target instanceof BridgeBuild && target.block == tile.block) {
-            BridgeBuild other = (BridgeBuild) target;
-            Seq<Integer> otherLinks = other.getLink();
-            if (otherLinks.contains(tile.pos())) {
-                otherLinks.remove(tile.pos());
-                other.setLink(otherLinks);
-            }
-        }
-    } else {
-        if (links.size >= LINK_LIMIT) return;
+        otherLinks.remove(tile.pos());
+    } else if (!currentHas && !targetHas) {
+        // 双向都没有，添加（连接）
+        if (links.size >= LINK_LIMIT || otherLinks.size >= LINK_LIMIT) return;
         links.add(pos);
-        Building target = world.build(pos);
-        if (target instanceof BridgeBuild && target.block == tile.block) {
-            BridgeBuild other = (BridgeBuild) target;
-            Seq<Integer> otherLinks = other.getLink();
-            if (otherLinks.contains(tile.pos())) {
-                otherLinks.remove(tile.pos());
-                other.setLink(otherLinks);
-            }
-        }
+        otherLinks.add(tile.pos());
+    } else {
+        // 不一致，修复为断开状态（移除所有）
+        links.remove(pos);
+        otherLinks.remove(tile.pos());
     }
+
     tile.setLink(links);
+    other.setLink(otherLinks);
 });
 
         buildType = BridgeBuild::new;
@@ -180,7 +184,7 @@ config(Integer.class, (BridgeBuild tile, Integer pos) -> {
 
         @Override
         public void updateTile() {
-            efficiency = Mathf.lerpDelta(efficiency, shouldConsume() ? 1f : 0f, warmupSpeed);
+            if (links == null) links = new Seq<>();
             for (int i = transport.size - 1; i >= 0; i--) {
                 TransportData t = transport.get(i);
                 if (--t.time <= 0) {
