@@ -7,6 +7,7 @@ import arc.graphics.g2d.Fill;
 import arc.graphics.g2d.Lines;
 import arc.math.Mathf;
 import arc.math.geom.Point2;
+import arc.struct.IntSeq;
 import arc.struct.Seq;
 import arc.util.Time;
 import arc.util.io.Reads;
@@ -25,12 +26,13 @@ import mindustry.world.meta.StatUnit;
 import static mindustry.Vars.*;
 
 public class BridgeRouter extends StorageBlock {
-    // ---- 常量 ----
+
     private static final Color POWER_LOSS_COLOR = Color.valueOf("f49fa680");
     private static final Color POWER_LOSS_INNER_COLOR = Color.valueOf("ec767859");
     private static final Color LINE_COLOR_OUTER = Color.valueOf("c0edf4");
     private static final Color LINE_COLOR_INNER = Color.valueOf("a1d7ecb3");
     private static final Color ARROW_COLOR = Color.valueOf("c0edf4");
+
     private static final float LINE_WIDTH_OUTER = 1f;
     private static final float LINE_WIDTH_INNER = 4f;
     private static final float CAP_LINE_WIDTH = 1f;
@@ -41,13 +43,12 @@ public class BridgeRouter extends StorageBlock {
     private static final float LINE_INSET = 4f;
     private static final float OUTER_EXTEND = 1.5f;
     private static final float LINE_INSET1 = 2f;
-    private static final int LINK_LIMIT = 4;
-    private static final int FRAME_DELAY = 1;
 
     public float range = 64f;
     public float warmupSpeed = 0.05f;
+    public static final int LINK_LIMIT = 4;
+    public static final int FRAME_DELAY = 1;
 
-    // 全局活跃桥列表
     public static final Seq<BridgeBuild> activeBridges = new Seq<>();
 
     public BridgeRouter(String name) {
@@ -57,19 +58,17 @@ public class BridgeRouter extends StorageBlock {
         hasItems = true;
         configurable = true;
 
-        // 配置序列化：接收相对坐标列表 (Seq)
-        config(Seq.class, (BridgeBuild tile, Seq seq) -> {
+        config(IntSeq.class, (BridgeBuild tile, IntSeq seq) -> {
             Seq<Integer> links = new Seq<>();
             for (int i = 0; i < seq.size; i += 2) {
-                int x = ((Number) seq.get(i)).intValue();
-                int y = ((Number) seq.get(i + 1)).intValue();
+                int x = seq.get(i);
+                int y = seq.get(i + 1);
                 int pos = Point2.pack(x + tile.tileX(), y + tile.tileY());
                 links.add(pos);
             }
             tile.setLink(links);
         });
 
-        // 配置单个连接点（添加/移除）
         config(Integer.class, (BridgeBuild tile, Integer pos) -> {
             Seq<Integer> links = tile.getLink();
             if (links.contains(pos)) {
@@ -78,7 +77,7 @@ public class BridgeRouter extends StorageBlock {
                 if (links.size >= LINK_LIMIT) return;
                 links.add(pos);
                 Building target = world.build(pos);
-                if (target instanceof BridgeBuild && target.block == tile.block) {
+                if (target instanceof BridgeBuild && target.block == this) {
                     BridgeBuild other = (BridgeBuild) target;
                     Seq<Integer> otherLinks = other.getLink();
                     if (otherLinks.contains(tile.pos())) {
@@ -104,11 +103,11 @@ public class BridgeRouter extends StorageBlock {
     public void setBars() {
         super.setBars();
         addBar("connections", (BridgeBuild e) ->
-                new Bar(
-                        () -> Core.bundle.format("bar.powerlines", e.getLink().size, LINK_LIMIT),
-                        () -> Pal.accent,
-                        () -> (float) e.getLink().size / LINK_LIMIT
-                )
+            new Bar(
+                () -> Core.bundle.format("bar.powerlines", e.getLink().size, LINK_LIMIT),
+                () -> Pal.accent,
+                () -> (float) e.getLink().size / LINK_LIMIT
+            )
         );
     }
 
@@ -118,11 +117,8 @@ public class BridgeRouter extends StorageBlock {
     }
 
     @Override
-    public boolean outputsItems() {
-        return true;
-    }
+    public boolean outputsItems() { return true; }
 
-    // ============== 内部建筑类 ==============
     public class BridgeBuild extends StorageBuild {
         private Seq<Integer> links = new Seq<>();
         private float warmup = 0f;
@@ -138,7 +134,7 @@ public class BridgeRouter extends StorageBlock {
             int time;
         }
 
-        public Seq<Integer> getLink() { return links == null ? new Seq<>() : links; }
+        public Seq<Integer> getLink() { return links; }
         public void setLink(Seq<Integer> v) {
             if (v == null) links = new Seq<>();
             else links = v;
@@ -161,6 +157,10 @@ public class BridgeRouter extends StorageBlock {
             return !links.isEmpty();
         }
 
+        public void updateEfficiency() {
+            efficiency = Mathf.lerpDelta(efficiency, shouldConsume() ? 1f : 0f, warmupSpeed);
+        }
+
         @Override
         public boolean acceptItem(Building source, Item item) {
             if (items.total() >= itemCapacity) return false;
@@ -169,18 +169,13 @@ public class BridgeRouter extends StorageBlock {
 
         @Override
         public void updateTile() {
-            efficiency = Mathf.lerpDelta(efficiency, shouldConsume() ? 1f : 0f, warmupSpeed);
-
-            // 处理运输中的物品
             for (int i = transport.size - 1; i >= 0; i--) {
                 TransportData t = transport.get(i);
                 if (--t.time <= 0) {
                     Building target = world.build(t.target);
                     if (target instanceof BridgeBuild && target.team == team && target.block == block) {
                         int accept = Math.min(t.amount, target.acceptStack(t.item, t.amount, this));
-                        if (accept > 0) {
-                            target.handleStack(t.item, accept, this);
-                        }
+                        if (accept > 0) target.handleStack(t.item, accept, this);
                     }
                     transport.remove(i);
                 }
@@ -212,8 +207,7 @@ public class BridgeRouter extends StorageBlock {
                 return;
             }
 
-            if (Time.time % FRAME_DELAY < 1) {
-                // 清理无效连接
+            if (!links.isEmpty() && Time.time % FRAME_DELAY < 1) {
                 for (int i = links.size - 1; i >= 0; i--) {
                     Building target = world.build(links.get(i));
                     if (!(target instanceof BridgeBuild) || target.team != team || target.block != block || !within(target, range)) {
@@ -256,7 +250,11 @@ public class BridgeRouter extends StorageBlock {
             warmup = Mathf.lerpDelta(warmup, links.isEmpty() ? 0f : 1f, warmupSpeed);
             rotateSpeed = Mathf.lerpDelta(rotateSpeed, itemSent ? 1f : 0f, warmupSpeed);
         }
-        // ========== 绘制方法（全局静态） ==========
+        @Override
+public void draw() {
+    super.draw();
+}
+
 public static void drawAllBridges() {
     float prevZ = Draw.z();
     Draw.z(Layer.block + 1);
@@ -303,36 +301,28 @@ public static void drawAllBridges() {
             float outerEndX = innerEndX + extendX;
             float outerEndY = innerEndY + extendY;
 
-            Color outerColor = LINE_COLOR_OUTER.lerp(POWER_LOSS_COLOR, bridge.getPowerLoss());
-            Draw.color(outerColor);
+            Draw.color(LINE_COLOR_OUTER.lerp(POWER_LOSS_COLOR, bridge.getPowerLoss()));
             Lines.stroke(LINE_WIDTH_OUTER);
-            Lines.line(outerStartX + nx * offset, outerStartY + ny * offset,
-                       outerEndX + nx * offset, outerEndY + ny * offset);
-            Lines.line(outerStartX - nx * offset, outerStartY - ny * offset,
-                       outerEndX - nx * offset, outerEndY - ny * offset);
+            Lines.line(outerStartX + nx * offset, outerStartY + ny * offset, outerEndX + nx * offset, outerEndY + ny * offset);
+            Lines.line(outerStartX - nx * offset, outerStartY - ny * offset, outerEndX - nx * offset, outerEndY - ny * offset);
 
-            Color innerColor = LINE_COLOR_INNER.lerp(POWER_LOSS_INNER_COLOR,
-                    bridge.efficiency <= 0 ? 1f : 0f);
-            Draw.color(innerColor);
+            Draw.color(LINE_COLOR_INNER.lerp(POWER_LOSS_INNER_COLOR, bridge.efficiency <= 0 ? 1f : 0f));
             Lines.stroke(LINE_WIDTH_INNER);
             Lines.line(innerStartX, innerStartY, innerEndX, innerEndY);
 
-            Draw.color(outerColor);
+            Draw.color(LINE_COLOR_OUTER.lerp(POWER_LOSS_COLOR, bridge.getPowerLoss()));
             Lines.stroke(CAP_LINE_WIDTH);
-            Lines.line(outerStartX + nx * offset, outerStartY + ny * offset,
-                       outerStartX - nx * offset, outerStartY - ny * offset);
-            Lines.line(outerEndX + nx * offset, outerEndY + ny * offset,
-                       outerEndX - nx * offset, outerEndY - ny * offset);
+            Lines.line(outerStartX + nx * offset, outerStartY + ny * offset, outerStartX - nx * offset, outerStartY - ny * offset);
+            Lines.line(outerEndX + nx * offset, outerEndY + ny * offset, outerEndX - nx * offset, outerEndY - ny * offset);
 
-            drawFlowArrowsWithInset(bridge, target, bridge.efficiency > 0,
-                                    bridge.getPowerLoss(), LINE_INSET);
+            drawFlowArrowsWithInset(bridge, target, bridge.efficiency > 0, bridge.getPowerLoss(), LINE_INSET);
         }
     }
+
     Draw.z(prevZ);
 }
 
-private static void drawFlowArrowsWithInset(BridgeBuild from, Building to, boolean powered,
-                                            float powerLoss, float inset) {
+private static void drawFlowArrowsWithInset(BridgeBuild from, Building to, boolean powered, float powerLoss, float inset) {
     float dx = to.x - from.x;
     float dy = to.y - from.y;
     float totalDist = Mathf.dst(dx, dy);
@@ -346,10 +336,11 @@ private static void drawFlowArrowsWithInset(BridgeBuild from, Building to, boole
     float endY = to.y - normY * inset;
     float bridgeLength = Mathf.dst(endX - startX, endY - startY);
 
-    int arrows = (int) (bridgeLength / ARROW_SPACING);
+    int arrows = (int)(bridgeLength / ARROW_SPACING);
     if (arrows <= 0) return;
 
     float angle = Mathf.angle(dx, dy);
+
     for (int a = 0; a < arrows; a++) {
         float px = startX + normX * a * ARROW_SPACING;
         float py = startY + normY * a * ARROW_SPACING;
@@ -358,13 +349,12 @@ private static void drawFlowArrowsWithInset(BridgeBuild from, Building to, boole
         if (alpha <= 0.01f) continue;
         float finalAlpha = powered ? alpha : 0.5f;
 
-        Color arrowColor = ARROW_COLOR.lerp(POWER_LOSS_COLOR, powerLoss);
-        Draw.color(arrowColor, finalAlpha);
+        Draw.color(ARROW_COLOR.lerp(POWER_LOSS_COLOR, powerLoss), finalAlpha);
         float rad = angle * Mathf.degRad;
         Fill.tri(
-                px + Mathf.cos(rad) * ARROW_SIZE, py + Mathf.sin(rad) * ARROW_SIZE,
-                px + Mathf.cos(rad + Mathf.PI * 0.5f) * ARROW_SIZE, py + Mathf.sin(rad + Mathf.PI * 0.5f) * ARROW_SIZE,
-                px + Mathf.cos(rad - Mathf.PI * 0.5f) * ARROW_SIZE, py + Mathf.sin(rad - Mathf.PI * 0.5f) * ARROW_SIZE
+            px + Mathf.cos(rad) * ARROW_SIZE, py + Mathf.sin(rad) * ARROW_SIZE,
+            px + Mathf.cos(rad + Mathf.PI * 0.5f) * ARROW_SIZE, py + Mathf.sin(rad + Mathf.PI * 0.5f) * ARROW_SIZE,
+            px + Mathf.cos(rad - Mathf.PI * 0.5f) * ARROW_SIZE, py + Mathf.sin(rad - Mathf.PI * 0.5f) * ARROW_SIZE
         );
     }
 }
@@ -383,7 +373,7 @@ private static void drawMovingArrow(Building from, Building to, Color color, flo
     float endY = to.y - normY * inset;
     float bridgeLength = Mathf.dst(endX - startX, endY - startY);
     float speed = 0.02f;
-    float progress = (Time.time * speed) % 1.0f;
+    float progress = (Time.time * speed) % 1f;
     float px = startX + normX * bridgeLength * progress;
     float py = startY + normY * bridgeLength * progress;
     float angle = Mathf.angle(dx, dy);
@@ -392,12 +382,11 @@ private static void drawMovingArrow(Building from, Building to, Color color, flo
 
     Draw.color(color);
     Fill.tri(
-            px + Mathf.cos(rad) * arrowSize, py + Mathf.sin(rad) * arrowSize,
-            px + Mathf.cos(rad + Mathf.PI * 0.5f) * arrowSize, py + Mathf.sin(rad + Mathf.PI * 0.5f) * arrowSize,
-            px + Mathf.cos(rad - Mathf.PI * 0.5f) * arrowSize, py + Mathf.sin(rad - Mathf.PI * 0.5f) * arrowSize
+        px + Mathf.cos(rad) * arrowSize, py + Mathf.sin(rad) * arrowSize,
+        px + Mathf.cos(rad + Mathf.PI * 0.5f) * arrowSize, py + Mathf.sin(rad + Mathf.PI * 0.5f) * arrowSize,
+        px + Mathf.cos(rad - Mathf.PI * 0.5f) * arrowSize, py + Mathf.sin(rad - Mathf.PI * 0.5f) * arrowSize
     );
 }
-        // ========== 配置模式绘制 ==========
         @Override
         public void drawConfigure() {
             float pulse = Mathf.absin(Time.time, 4f, 1f);
@@ -405,7 +394,6 @@ private static void drawMovingArrow(Building from, Building to, Color color, flo
             Lines.stroke(1f);
             Drawf.select(x, y, tile.block().size * tilesize / 2f + 2f, Pal.accent);
 
-            // 绘制已连接目标
             for (int i = 0; i < links.size; i++) {
                 int pos = links.get(i);
                 Building target = world.build(pos);
@@ -414,49 +402,120 @@ private static void drawMovingArrow(Building from, Building to, Color color, flo
                 }
             }
 
-            // 显示可连接但未连接的目标
             int myPos = pos();
             for (BridgeBuild other : activeBridges) {
-                if (other == this || other.team != team || !within(other, range)) continue;
-                boolean connected = links.contains(other.pos()) || other.getLink().contains(myPos);
+                if (!other.isValid() || other == this || other.team != team || !within(other, range)) continue;
+                boolean connected = false;
+                for (int j = 0; j < links.size; j++) {
+                    if (links.get(j) == other.pos()) {
+                        connected = true;
+                        break;
+                    }
+                }
+                if (!connected && other.getLink().contains(myPos)) {
+                    connected = true;
+                }
                 if (!connected) {
                     Drawf.select(other.x, other.y, other.block.size * tilesize / 2f + 2f + pulse, Pal.breakInvalid);
                 }
             }
 
-            // 配置辅助线（灰色粗线）
             Draw.z(Layer.block + 1);
             for (int i = 0; i < links.size; i++) {
                 int pos = links.get(i);
                 Building target = world.build(pos);
                 if (target instanceof BridgeBuild && target.team == team && within(target, range)) {
-                    drawConfigLine(this, target, Color.valueOf("#454545"), 2.5f);
-                }
-            }
-            for (BridgeBuild other : activeBridges) {
-                if (other == this || other.team != team) continue;
-                if (other.getLink().contains(myPos) && !links.contains(other.pos())) {
-                    drawConfigLine(other, this, Color.valueOf("#454545"), 2.5f);
+                    float dx = target.x - x;
+                    float dy = target.y - y;
+                    float dist = Mathf.dst(dx, dy);
+                    if (dist == 0) continue;
+                    float ux = dx / dist;
+                    float uy = dy / dist;
+                    float sx = x + ux * LINE_INSET1;
+                    float sy = y + uy * LINE_INSET1;
+                    float ex = target.x - ux * LINE_INSET1;
+                    float ey = target.y - uy * LINE_INSET1;
+                    Draw.color(Color.valueOf("#454545"));
+                    Lines.stroke(2.5f);
+                    Lines.line(sx, sy, ex, ey);
                 }
             }
 
-            // 彩色指示线（紫色/金色）
+            for (BridgeBuild other : activeBridges) {
+                if (!other.isValid() || other == this || other.team != team) continue;
+                if (!other.getLink().contains(myPos)) continue;
+                if (links.contains(other.pos())) continue;
+                float dx = x - other.x;
+                float dy = y - other.y;
+                float dist = Mathf.dst(dx, dy);
+                if (dist == 0) continue;
+                float ux = dx / dist;
+                float uy = dy / dist;
+                float sx = other.x + ux * LINE_INSET1;
+                float sy = other.y + uy * LINE_INSET1;
+                float ex = x - ux * LINE_INSET1;
+                float ey = y - uy * LINE_INSET1;
+                Draw.color(Color.valueOf("#454545"));
+                Lines.stroke(2.5f);
+                Lines.line(sx, sy, ex, ey);
+            }
+
             Draw.z(Layer.block + 1);
             for (int i = 0; i < links.size; i++) {
                 int pos = links.get(i);
                 Building target = world.build(pos);
                 if (target instanceof BridgeBuild && target.team == team && within(target, range)) {
-                    drawConfigLine(this, target, Color.valueOf("#662fff"), 1f);
-                }
-            }
-            for (BridgeBuild other : activeBridges) {
-                if (other == this || other.team != team) continue;
-                if (other.getLink().contains(myPos) && !links.contains(other.pos())) {
-                    drawConfigLine(other, this, Color.valueOf("#ffd16d"), 1f);
+                    Drawf.square(target.x, target.y, 1f, Pal.place);
                 }
             }
 
-            // 配置模式下的移动箭头
+            for (BridgeBuild other : activeBridges) {
+                if (!other.isValid() || other == this || other.team != team || !within(other, range)) continue;
+                if (!other.getLink().contains(myPos)) continue;
+                if (links.contains(other.pos())) continue;
+                Drawf.square(other.x, other.y, 1f, Pal.accent);
+            }
+
+            Draw.z(Layer.block + 1);
+            for (int i = 0; i < links.size; i++) {
+                int pos = links.get(i);
+                Building target = world.build(pos);
+                if (target instanceof BridgeBuild && target.team == team && within(target, range)) {
+                    float dx = target.x - x;
+                    float dy = target.y - y;
+                    float dist = Mathf.dst(dx, dy);
+                    if (dist == 0) continue;
+                    float ux = dx / dist;
+                    float uy = dy / dist;
+                    float sx = x + ux * LINE_INSET1;
+                    float sy = y + uy * LINE_INSET1;
+                    float ex = target.x - ux * LINE_INSET1;
+                    float ey = target.y - uy * LINE_INSET1;
+                    Draw.color(Color.valueOf("#662fff"));
+                    Lines.stroke(1f);
+                    Lines.line(sx, sy, ex, ey);
+                }
+            }
+
+            for (BridgeBuild other : activeBridges) {
+                if (!other.isValid() || other == this || other.team != team) continue;
+                if (!other.getLink().contains(myPos)) continue;
+                if (links.contains(other.pos())) continue;
+                float dx = x - other.x;
+                float dy = y - other.y;
+                float dist = Mathf.dst(dx, dy);
+                if (dist == 0) continue;
+                float ux = dx / dist;
+                float uy = dy / dist;
+                float sx = other.x + ux * LINE_INSET1;
+                float sy = other.y + uy * LINE_INSET1;
+                float ex = x - ux * LINE_INSET1;
+                float ey = y - uy * LINE_INSET1;
+                Draw.color(Color.valueOf("#ffd16d"));
+                Lines.stroke(1f);
+                Lines.line(sx, sy, ex, ey);
+            }
+
             Draw.z(Layer.block + 1);
             for (int i = 0; i < links.size; i++) {
                 int pos = links.get(i);
@@ -465,41 +524,24 @@ private static void drawMovingArrow(Building from, Building to, Color color, flo
                     drawMovingArrow(this, target, Pal.place, LINE_INSET1 - 2);
                 }
             }
+
             for (BridgeBuild other : activeBridges) {
-                if (other == this || other.team != team) continue;
-                if (other.getLink().contains(myPos) && !links.contains(other.pos())) {
-                    drawMovingArrow(other, this, Pal.accent, LINE_INSET1 - 2);
-                }
+                if (!other.isValid() || other == this || other.team != team) continue;
+                if (!other.getLink().contains(myPos)) continue;
+                if (links.contains(other.pos())) continue;
+                drawMovingArrow(other, this, Pal.accent, LINE_INSET1 - 2);
             }
 
             Drawf.dashCircle(x, y, range - tilesize, Pal.accent);
         }
 
-        private void drawConfigLine(Building from, Building to, Color color, float width) {
-            float dx = to.x - from.x;
-            float dy = to.y - from.y;
-            float dist = Mathf.dst(dx, dy);
-            if (dist == 0) return;
-            float ux = dx / dist;
-            float uy = dy / dist;
-            float sx = from.x + ux * LINE_INSET1;
-            float sy = from.y + uy * LINE_INSET1;
-            float ex = to.x - ux * LINE_INSET1;
-            float ey = to.y - uy * LINE_INSET1;
-            Draw.color(color);
-            Lines.stroke(width);
-            Lines.line(sx, sy, ex, ey);
-        }
-
-        // ========== 配置交互 ==========
         @Override
         public boolean onConfigureBuildTapped(Building other) {
             if (this == other) {
                 links.clear();
                 return false;
             }
-            if (other instanceof BridgeBuild && other.team == team && other.block == block &&
-                    within(other, range)) {
+            if (other instanceof BridgeBuild && other.team == team && other.block == block && within(other, range)) {
                 configure(other.pos());
                 return false;
             }
@@ -508,7 +550,7 @@ private static void drawMovingArrow(Building from, Building to, Color color, flo
 
         @Override
         public Object config() {
-            Seq<Integer> out = new Seq<>(links.size * 2);
+            IntSeq out = new IntSeq(links.size * 2);
             for (int i = 0; i < links.size; i++) {
                 Point2 p = Point2.unpack(links.get(i)).sub(tile.x, tile.y);
                 out.add(p.x);
