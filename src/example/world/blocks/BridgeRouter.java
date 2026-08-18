@@ -398,7 +398,7 @@ private static void drawMovingArrow(Building from, Building to, Color color, flo
     );
 }
         @Override
-        public void drawConfigure() {
+        public static void drawConfigure() {
             float pulse = Mathf.absin(Time.time, 4f, 1f);
             Draw.color(Pal.accent);
             Lines.stroke(1f);
