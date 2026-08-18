@@ -12,9 +12,9 @@ public class ExampleJavaMod extends Mod{
     public ExampleJavaMod(){
         Events.on(ClientLoadEvent.class, e -> {
             Time.run(delay: 10f, () -> {
-                BaseDialog dialog = new BaseDialog(title: "可以去你家里嘛>w<");
+                BaseDialog dialog = new BaseDialog(title:"可以去你家里嘛>w<");
                 dialog.cont.add("可以看到");
-                Time.run(delay: 100f, dialog::addCloseButton);
+                Time.run(delay:100f, dialog::addCloseButton);
                 dialog.show();
             });
         });
