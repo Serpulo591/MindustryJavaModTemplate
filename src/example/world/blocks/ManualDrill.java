@@ -1,7 +1,9 @@
 package example.world.blocks;
 
+import arc.graphics.Color;
 import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Fill;
+import mindustry.entities.effect.Effect;
 import arc.math.Mathf;
 import mindustry.gen.Sounds;
 import mindustry.graphics.Pal;
