@@ -29,7 +29,7 @@ public class GlowTechTree {
     }
 
     public static TechNode nodeRoot(String name, UnlockableContent content, boolean requireUnlock, Runnable children){
-        var root = node(content, content.researchRequirements(), children);
+        TechNode root = node(content, content.researchRequirements(), children);
         root.name = name;
         root.requiresUnlock = requireUnlock;
         roots.add(root);
