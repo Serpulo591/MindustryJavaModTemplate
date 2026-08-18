@@ -3,7 +3,6 @@ package example.world.blocks;
 import arc.graphics.Color;
 import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Fill;
-import mindustry.entities.effect.Effect;
 import arc.math.Mathf;
 import mindustry.gen.Sounds;
 import mindustry.graphics.Pal;
@@ -13,7 +12,6 @@ import mindustry.content.Items;
 import mindustry.content.Liquids;
 import mindustry.world.blocks.production.Drill.DrillBuild;
 import example.content.GlowItems;
-import mindustry.world.draw.*;
 import mindustry.world.meta.*;
 
 import static mindustry.Vars.*;
@@ -33,6 +31,7 @@ public class ManualDrill extends Drill {
         warmupSpeed = 30f;
         itemCapacity = 10;
         liquidCapacity = 38f;
+        requirements(Category.production, with(GlowItems.cobalt, 12, Items.tungsten, 8));
         consumePower(0.5f);
         consumeLiquid(Liquids.water, 0.065f).boost();
 
@@ -63,27 +62,26 @@ public class ManualDrill extends Drill {
             super.updateTile();
         }
 
-@Override
-public void tapped() {
-    boostLevel += boostAdd;
-    if (boostLevel > boostMax) boostLevel = boostMax;
+        @Override
+        public void tapped() {
+            boostLevel += boostAdd;
+            if (boostLevel > boostMax) boostLevel = boostMax;
 
-    if (this.power.status <= 0) {
-        emergencyTime = 60;
-    }
+            if (this.power.status <= 0) {
+                emergencyTime = 60;
+            }
 
-    Sounds.click.play();
+            Sounds.click.play();
 
-    // 使用 Effect 播放一个明显的爆炸特效
-    Effect mineEffect = new Effect(30f, e -> {
-        Draw.color(Pal.accent);
-        Fill.circle(e.x, e.y, 4f);
-        Draw.color(Pal.ammo);
-        Fill.circle(e.x - 3, e.y - 3, 2f);
-        Draw.color(Color.valueOf("ffaa66"));
-        Fill.circle(e.x + 3, e.y + 3, 2f);
-    });
-    mineEffect.at(this.x, this.y);
-}
+            // 点击特效：直接绘制彩色圆点（不依赖任何外部效果类）
+            Draw.color(Pal.accent);
+            Fill.circle(this.x, this.y, 5f);
+            Draw.color(Pal.ammo);
+            Fill.circle(this.x - 4, this.y - 4, 3f);
+            Draw.color(Color.valueOf("ffaa66"));
+            Fill.circle(this.x + 4, this.y + 4, 3f);
+            Draw.color(Color.white);
+            Fill.circle(this.x, this.y, 2f);
+        }
     }
 }
