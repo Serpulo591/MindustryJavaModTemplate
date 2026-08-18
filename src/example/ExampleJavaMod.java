@@ -14,7 +14,7 @@ public class ExampleJavaMod extends Mod{
             Time.run(delay: 10f, () -> {
                 BaseDialog dialog = new BaseDialog(title: "可以去你家里嘛>w<");
                 dialog.cont.add("可以看到");
-                Time.run(delay: 100f, dialog::addCloseButton)
+                Time.run(delay: 100f, dialog::addCloseButton);
                 dialog.show();
             });
         });
