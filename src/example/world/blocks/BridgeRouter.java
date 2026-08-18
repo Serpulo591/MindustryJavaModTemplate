@@ -1,5 +1,8 @@
 package example.world.blocks;
 
+import mindustry.Core;
+import mindustry.graphics.Drawf;
+import mindustry.gen.IntSeq;
 import arc.graphics.Color;
 import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Fill;
@@ -62,16 +65,16 @@ public class BridgeRouter extends StorageBlock {
         solid = true;
         hasItems = true;
         configurable = true;
-        config(Seq.class, (BridgeBuild tile, Seq<Integer> seq) -> {
-            Seq<Integer> links = new Seq<>();
-            for (int i = 0; i < seq.size; i += 2) {
-                int x = seq.get(i);
-                int y = seq.get(i + 1);
-                int pos = Point2.pack(x + tile.tileX(), y + tile.tileY());
-                links.add(pos);
-            }
-            tile.setLink(links);
-        });
+config(Seq.class, (BridgeBuild tile, Seq seq) -> {
+    Seq<Integer> links = new Seq<>();
+    for (int i = 0; i < seq.size; i += 2) {
+        int x = (int) seq.get(i);
+        int y = (int) seq.get(i + 1);
+        int pos = Point2.pack(x + tile.tileX(), y + tile.tileY());
+        links.add(pos);
+    }
+    tile.setLink(links);
+});
         config(Integer.class, (BridgeBuild tile, Integer pos) -> {
             Seq<Integer> links = tile.getLink();
             if (links.contains(pos)) {
@@ -91,6 +94,7 @@ public class BridgeRouter extends StorageBlock {
             }
             tile.setLink(links);
         });
+        buildType = BridgeBuild::new;
     }
   @Override
 public void setStats() {
@@ -118,12 +122,6 @@ public void drawPlace(int x, int y, int rotation, boolean valid) {
 
 @Override
 public boolean outputsItems() { return true; }
-
-@Override
-public Building newBuilding() {
-    return new BridgeBuild();
-}
-
 public class BridgeBuild extends StorageBuild {
     private Seq<Integer> links = new Seq<>();
     private float warmup = 0f;
@@ -175,6 +173,7 @@ public class BridgeBuild extends StorageBuild {
 
     @Override
     public void updateTile() {
+        efficiency = Mathf.lerpDelta(efficiency, shouldConsume() ? 1f : 0f, warmupSpeed);
         // 处理传输中的物品
         for (int i = transport.size - 1; i >= 0; i--) {
             TransportData t = transport.get(i);
@@ -237,7 +236,7 @@ public class BridgeBuild extends StorageBuild {
                         for (Item item : content.items()) {
                             int amount = items.get(item);
                             if (amount <= 0) continue;
-                            int accept = Math.min(amount, 1, target.acceptStack(item, 1, this));
+                            int accept = Math.min(amount, target.acceptStack(item, 1, this));
                             if (accept > 0) {
                                 TransportData t = new TransportData();
                                 t.item = item;
@@ -512,10 +511,11 @@ private static void drawMovingArrow(Building from, Building to, Color color, flo
 
         @Override
         public Object config() {
-            IntSeq out = new IntSeq(links.size * 2);
+            Seq<Integer> out = new Seq<>(links.size * 2);
             for (int i = 0; i < links.size; i++) {
                 Point2 p = Point2.unpack(links.get(i)).sub(tile.x, tile.y);
-                out.add(p.x, p.y);
+                out.add(point.x);
+                out.add(point.y);
             }
             return out;
         }
