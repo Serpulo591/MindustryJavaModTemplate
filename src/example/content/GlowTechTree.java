@@ -15,7 +15,7 @@ public class GlowTechTree {
     
     public static void load(){
         addToNext(Blocks.conveyor,() ->{
-            node(GlowBlocks.conveyor1)
+            node(GlowBlocks.conveyor1);
         });
     }
     
