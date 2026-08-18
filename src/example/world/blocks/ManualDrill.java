@@ -1,6 +1,5 @@
 package example.world.blocks;
 
-// === 完全复制 GlowBlocks 的导入 ===
 import arc.graphics.*;
 import arc.math.*;
 import arc.struct.*;
@@ -42,7 +41,6 @@ import mindustry.content.Liquids;
 import static mindustry.Vars.*;
 import static mindustry.type.ItemStack.*;
 
-// 额外导入你自己的物品
 import example.content.GlowItems;
 
 public class ManualDrill extends Drill {
@@ -59,7 +57,6 @@ public class ManualDrill extends Drill {
         warmupSpeed = 30f;
         itemCapacity = 10;
         liquidCapacity = 38f;
-        // 使用与 GlowBlocks 完全相同的写法
         requirements(Category.production, with(GlowItems.cobalt, 12, Items.tungsten, 8));
         consumePower(0.5f);
         consumeLiquid(Liquids.water, 0.065f).boost();
@@ -67,7 +64,8 @@ public class ManualDrill extends Drill {
         buildType = () -> new ManualDrillBuild();
     }
 
-    public static class ManualDrillBuild extends DrillBuild {
+    // 非静态内部类，继承 DrillBuild
+    public class ManualDrillBuild extends DrillBuild {
         public float boostLevel = 1f;
         public int emergencyTime = 0;
         public final float boostAdd = 1f;
@@ -101,8 +99,8 @@ public class ManualDrill extends Drill {
             }
 
             Sounds.click.play();
-            // Fx 如果仍报错，可保留注释，或尝试 Fx.mineSmall
-            // Fx.mineSmall.at(this.x, this.y);
+            // 如果 Fx 仍报错，可注释掉这行
+            Fx.mineSmall.at(this.x, this.y);
         }
     }
 }
