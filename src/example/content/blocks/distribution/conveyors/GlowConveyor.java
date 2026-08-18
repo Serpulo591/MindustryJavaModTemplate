@@ -2,7 +2,7 @@ package example.content.blocks.distribution.conveyors;
 
 import mindustry.type.Conveyor;
 
-public class GlowItems {
+public class GlowConveyor {
     public static Conveyor
         conveyor1,
         highCarbonConveyor;
