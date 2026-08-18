@@ -28,7 +28,5 @@ public class ExampleJavaMod extends Mod {
     public void loadContent() {
         GlowItems.load();
         GlowBlocks.load();
-        GlowTechTree.load();
-        Events.run(Trigger.draw, BridgeRouter.BridgeBuild::drawAllBridges);
     }
 }
