@@ -8,6 +8,7 @@ import mindustry.ui.dialogs.*;
 
 import example.content.GlowItems;
 import example.content.GlowBlocks;
+import example.content.GlowTechTree;
 
 
 public class ExampleJavaMod extends Mod {
@@ -26,5 +27,6 @@ public class ExampleJavaMod extends Mod {
     public void loadContent() {
         GlowItems.load();
         GlowBlocks.load();
+        GlowTechTree.load();
     }
 }
