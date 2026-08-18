@@ -61,24 +61,27 @@ public class ManualDrill extends Drill {
             super.updateTile();
         }
 
-        @Override
-        public void tapped() {
-            boostLevel += boostAdd;
-            if (boostLevel > boostMax) boostLevel = boostMax;
+@Override
+public void tapped() {
+    boostLevel += boostAdd;
+    if (boostLevel > boostMax) boostLevel = boostMax;
 
-            if (this.power.status <= 0) {
-                emergencyTime = 60;
-            }
+    if (this.power.status <= 0) {
+        emergencyTime = 60;
+    }
 
-            Sounds.click.play();
+    Sounds.click.play();
 
-            // 点击特效：直接画彩色圆点
-            Draw.color(Pal.accent);
-            Fill.circle(this.x, this.y, 3f);
-            Draw.color(Pal.ammo);
-            Fill.circle(this.x - 2, this.y - 2, 2f);
-            Draw.color(Pal.accent);
-            Fill.circle(this.x + 2, this.y + 2, 1.5f);
-        }
+    // 使用 Effect 播放一个明显的爆炸特效
+    Effect mineEffect = new Effect(30f, e -> {
+        Draw.color(Pal.accent);
+        Fill.circle(e.x, e.y, 4f);
+        Draw.color(Pal.ammo);
+        Fill.circle(e.x - 3, e.y - 3, 2f);
+        Draw.color(Color.valueOf("ffaa66"));
+        Fill.circle(e.x + 3, e.y + 3, 2f);
+    });
+    mineEffect.at(this.x, this.y);
+}
     }
 }
