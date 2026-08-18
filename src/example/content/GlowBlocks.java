@@ -36,6 +36,8 @@ import mindustry.world.blocks.units.*;
 import mindustry.world.consumers.*;
 import mindustry.world.draw.*;
 import mindustry.world.meta.*;
+import mindustry.content.Items;
+import mindustry.content.Liquids;
 
 import static mindustry.Vars.*;
 import static mindustry.type.ItemStack.*;
