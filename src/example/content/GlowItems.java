@@ -15,7 +15,7 @@ public class item {
             alwaysUnlocked = true;
         }};
         
-        crudeSilicon = new Item(name: "crude-silicon", Color.valueOf("676c70"){{
+        crudeSilicon = new Item(name: "crude-silicon", Color.valueOf("676c70")){{
             buildable = false;
             alwaysUnlocked = false;
         }};
