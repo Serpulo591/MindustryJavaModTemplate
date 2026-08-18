@@ -1,49 +1,20 @@
 package example.world.blocks;
 
-import arc.graphics.*;
-import arc.math.*;
-import arc.struct.*;
 import arc.graphics.g2d.Draw;
-import arc.graphics.g2d.Drawf;
-import mindustry.*;
-import mindustry.entities.*;
-import mindustry.entities.abilities.*;
-import mindustry.entities.bullet.*;
-import mindustry.entities.effect.*;
-import mindustry.entities.part.DrawPart.*;
-import mindustry.entities.part.*;
-import mindustry.entities.pattern.*;
-import mindustry.game.*;
-import mindustry.gen.*;
-import mindustry.graphics.*;
-import mindustry.type.*;
-import mindustry.type.unit.*;
-import mindustry.world.*;
-import mindustry.world.blocks.*;
-import mindustry.world.blocks.campaign.*;
-import mindustry.world.blocks.defense.*;
-import mindustry.world.blocks.defense.turrets.*;
-import mindustry.world.blocks.distribution.*;
-import mindustry.world.blocks.environment.*;
-import mindustry.world.blocks.heat.*;
-import mindustry.world.blocks.legacy.*;
-import mindustry.world.blocks.liquid.*;
-import mindustry.world.blocks.logic.*;
-import mindustry.world.blocks.payloads.*;
-import mindustry.world.blocks.power.*;
-import mindustry.world.blocks.production.*;
-import mindustry.world.blocks.sandbox.*;
-import mindustry.world.blocks.storage.*;
-import mindustry.world.blocks.units.*;
-import mindustry.world.consumers.*;
-import mindustry.world.draw.*;
-import mindustry.world.meta.*;
+import arc.graphics.g2d.Fill;
+import arc.math.*;
+import mindustry.entities.effect.Effect;
+import mindustry.gen.Sounds;
+import mindustry.graphics.Pal;
+import mindustry.world.blocks.production.Drill;
+import mindustry.type.ItemStack;
 import mindustry.content.Items;
 import mindustry.content.Liquids;
+import mindustry.world.blocks.production.Drill.DrillBuild;
+import example.content.GlowItems;
+
 import static mindustry.Vars.*;
 import static mindustry.type.ItemStack.*;
-
-import example.content.GlowItems;
 
 public class ManualDrill extends Drill {
 
@@ -66,7 +37,6 @@ public class ManualDrill extends Drill {
         buildType = () -> new ManualDrillBuild();
     }
 
-    // 非静态内部类，继承 DrillBuild
     public class ManualDrillBuild extends DrillBuild {
         public float boostLevel = 1f;
         public int emergencyTime = 0;
@@ -91,24 +61,26 @@ public class ManualDrill extends Drill {
             super.updateTile();
         }
 
-@Override
-public void tapped() {
-    boostLevel += boostAdd;
-    if (boostLevel > boostMax) boostLevel = boostMax;
+        @Override
+        public void tapped() {
+            boostLevel += boostAdd;
+            if (boostLevel > boostMax) boostLevel = boostMax;
 
-    if (this.power.status <= 0) {
-        emergencyTime = 60;
-    }
+            if (this.power.status <= 0) {
+                emergencyTime = 60;
+            }
 
-    Sounds.click.play();
+            Sounds.click.play();
 
-    // 自定义点击特效（替代 Fx.mineSmall）
-    Effect spark = new Effect(20f, e -> {
-        Draw.color(Pal.accent);
-        Drawf.tri(e.x, e.y, 4f, 4f, 10f);
-        Drawf.tri(e.x - 2, e.y - 2, 3f, 3f, -8f);
-    });
-    spark.at(this.x, this.y);
-}
+            // 自定义点击特效（使用 Fill 和 Draw，不依赖 Drawf）
+            Effect spark = new Effect(20f, e -> {
+                Draw.color(Pal.accent);        // 使用强调色
+                Fill.circle(e.x, e.y, 3f);      // 主圆
+                Fill.circle(e.x - 2, e.y - 2, 2f); // 第二个小圆
+                Draw.color(Pal.ammo);           // 换一种颜色
+                Fill.circle(e.x + 2, e.y + 2, 1.5f);
+            });
+            spark.at(this.x, this.y);
+        }
     }
 }
