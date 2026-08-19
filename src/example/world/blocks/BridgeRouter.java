@@ -12,7 +12,6 @@ import arc.math.geom.*;
 import arc.struct.*;
 import arc.util.*;
 import arc.util.io.*;
-import mindustry.annotations.Annotations.*;
 import mindustry.core.*;
 import mindustry.entities.*;
 import mindustry.entities.units.*;
@@ -22,11 +21,12 @@ import mindustry.input.*;
 import mindustry.ui.Bar;
 import mindustry.type.*;
 import mindustry.world.*;
+import mindustry.world.blocks.*;
 import mindustry.world.meta.*;
 
 import static mindustry.Vars.*;
 
-public class BridgeRouter extends StorageBlock {
+public class BridgeRouter extends Block {
     public final int timerCheckMoved = timers ++;
     public int range;
     public float transportTime;
