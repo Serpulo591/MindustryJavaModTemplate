@@ -9,7 +9,6 @@ import mindustry.game.*;
 import example.content.GlowItems;
 import example.content.GlowBlocks;
 import example.content.GlowTechTree;
-import example.world.blocks.BridgeRouter;
 
 
 public class ExampleJavaMod extends Mod {
