@@ -184,8 +184,8 @@ public void created() {
                 if (other == this) continue;
                 Seq<Integer> otherLinks = other.getLink();
                 if (otherLinks.contains(myPos)) {
-                    otherLinks.remove(myPos);
-                    other.setLink(otherLinks);
+                    otherLinks.removeValue(myPos);
+                    b.setLink(otherLinks);
                 }
             }
             activeBridges.remove(this);
