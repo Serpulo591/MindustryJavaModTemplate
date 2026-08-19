@@ -59,7 +59,22 @@ public class BridgeRouter extends StorageBlock {
         config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> tile.link = Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
         config(Integer.class, (BridgeRouterBuild tile, Integer i) -> tile.link = i);
     }
+    
     public class BridgeRouterBuild extends StorageBuild {
         public int link;
+    }
+    
+    @Override
+    public void setStats() {
+        super.setStats();
+        if(transportTime != 0f){
+            stats.add(Stat.itemsMoved, 60f / transportTime, StatUnit.itemsSecond);
+        }
+    }
+    
+    @Override
+    public void drawPlace(int x, int y, int rotation, boolean valid){
+        super.drawPlace(x, y, rotation, valid);
+        Drawf.dashCircle(x * tilesize, y * tilesize, range - tilesize, Pal.accent);
     }
 }
