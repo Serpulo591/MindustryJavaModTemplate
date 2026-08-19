@@ -72,52 +72,30 @@ public class BridgeRouter extends StorageBlock {
         });
 
 config(Integer.class, (BridgeRouterBuild tile, Integer value) -> {
-
-    if (value == null) return;
-
-    int targetPos = value;
-
-    // 不能连接自己
-    if (targetPos == tile.pos()) return;
-
-    Building targetBuild = world.build(targetPos);
-
-    // 目标不存在
-    if (targetBuild == null) return;
-
-    // 目标必须是 BridgeRouter
-    if (targetBuild.block != BridgeRouter.this) return;
-
-    // 必须是同队
-    if (targetBuild.team != tile.team) return;
-
-    // 必须在范围内
-    if (!tile.within(targetBuild, range)) return;
-
+    int pos = value;
     Seq<Integer> links = tile.getLink();
+    Integer intObj = pos;
 
-    // 已经连接 -> 取消连接
-    if (links.contains(targetPos)) {
-        links.remove(targetPos);
-        tile.setLink(links);
-        return;
+    if (links.contains(intObj)) {
+        links.remove(intObj);
+    } else {
+        if (links.size >= linkLimit) return;
+        links.add(intObj);
+
+        Building targetBuild = world.build(pos);
+        if (targetBuild != null && targetBuild.block == BridgeRouter.this) {
+            BridgeRouterBuild targetTile = (BridgeRouterBuild) targetBuild;
+            Seq<Integer> targetLinks = targetTile.getLink();
+            Integer myPos = tile.pos();
+
+            if (targetLinks.contains(myPos)) {
+                targetLinks.remove(myPos);
+                targetTile.setLink(targetLinks);
+            }
+        }
     }
 
-    // 已经达到连接上限
-    if (links.size >= linkLimit) return;
-
-    // 添加连接
-    links.add(targetPos);
     tile.setLink(links);
-
-    // 如果目标反向连接了自己，则取消目标的反向连接
-    BridgeRouterBuild targetTile = (BridgeRouterBuild) targetBuild;
-    Seq<Integer> targetLinks = targetTile.getLink();
-
-    if (targetLinks.contains(tile.pos())) {
-        targetLinks.remove(tile.pos());
-        targetTile.setLink(targetLinks);
-    }
 });
     }
 
