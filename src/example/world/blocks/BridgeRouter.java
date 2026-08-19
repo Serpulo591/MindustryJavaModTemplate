@@ -70,7 +70,7 @@ public class BridgeRouter extends StorageBlock {
         // config(Integer)
         config(Integer.class, (BridgeRouterBuild tile, Integer value) -> {
             int pos = value;
-            Seq<Integer> links = tile.getLink();
+            Seq<Integer> links = new Seq<>(tile.getLink());
             Integer intObj = pos;
             if (links.contains(intObj)) {
                 links.remove(intObj);
@@ -532,7 +532,7 @@ public class BridgeRouter extends StorageBlock {
         @Override
         public boolean onConfigureBuildTapped(Building other) {
             if (other == this) {
-                getLink().clear();
+                setLink(new Seq<>());
                 return false;
             }
             if (other != null && other.team == team && other.block == BridgeRouter.this && within(other, range)) {
