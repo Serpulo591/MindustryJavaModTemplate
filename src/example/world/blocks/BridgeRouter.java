@@ -1,4 +1,4 @@
-package mindustry.world.blocks.distribution;
+package mindustry.world.blocks;
 
 import arc.graphics.g2d.*;
 import mindustry.gen.*;
