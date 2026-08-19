@@ -66,30 +66,6 @@ public class BridgeRouter extends StorageBlock {
             }
             tile.setLink(links);
         });
-
-        // config(Integer)
-        config(Integer.class, (BridgeRouterBuild tile, Integer value) -> {
-            int pos = value;
-            Seq<Integer> links = new Seq<>(tile.getLink());
-            Integer intObj = pos;
-            if (links.contains(intObj)) {
-                links.remove(intObj);
-            } else {
-                if (links.size >= linkLimit) return;
-                links.add(intObj);
-                Building targetBuild = world.build(pos);
-                if (targetBuild != null && targetBuild.block == BridgeRouter.this) {
-                    BridgeRouterBuild targetTile = (BridgeRouterBuild) targetBuild;
-                    Seq<Integer> targetLinks = targetTile.getLink();
-                    Integer myPos = tile.pos();
-                    if (targetLinks.contains(myPos)) {
-                        targetLinks.remove(myPos);
-                        targetTile.setLink(targetLinks);
-                    }
-                }
-            }
-            tile.setLink(links);
-        });
     }
 
     @Override
