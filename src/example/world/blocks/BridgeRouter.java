@@ -148,8 +148,6 @@ public class BridgeRouter extends StorageBlock {
             Draw.color();
             Draw.rect("bridge-arrow", x, y, rel * 90);
             Draw.mixcol();
-            
-            super.drawPlace(x, y, rotation, valid);
             Drawf.dashCircle(x * tilesize, y * tilesize, range - tilesize, Pal.accent);
         }
         
