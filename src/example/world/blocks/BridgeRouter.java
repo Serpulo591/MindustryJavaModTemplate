@@ -85,7 +85,7 @@ public class BridgeRouter extends StorageBlock {
     public boolean linkValid(Tile tile, Tile other, boolean checkDouble){
         if(other == null || tile == null || !positionsValid(tile.x, tile.y, other.x, other.y)) return false;
 
-        return ((other.block() == tile.block() && tile.block() == this) || (!(tile.block() instanceof ItemBridge) && other.block() == this))
+        return ((other.block() == tile.block() && tile.block() == this) || (!(tile.block() instanceof BridgeRouter) && other.block() == this))
             && (other.team() == tile.team() || tile.block() != this);
     }
     
