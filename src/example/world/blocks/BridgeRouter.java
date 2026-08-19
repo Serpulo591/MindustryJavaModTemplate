@@ -51,9 +51,9 @@ public class BridgeRouter extends block {
     private static final int FRAME_DELAY = 1;
 
     // 全局引用
-    private static final Seq<WarpBridgeBuild> activeBridges = new Seq<>();
+    private static final Seq<BridgeRouterBuild> activeBridges = new Seq<>();
 
-    public WarpBridge(String name) {
+    public BridgeRouter(String name) {
         super(name);
         // 配置基础属性
         this.range = RANGE;
@@ -72,7 +72,7 @@ public class BridgeRouter extends block {
     @Override
     public void setBars() {
         super.setBars();
-        addBar("connections", (WarpBridgeBuild entity) ->
+        addBar("connections", (BridgeRouterBuild entity) ->
                 new Bar(
                         () -> Core.bundle.format("bar.powerlines", entity.getLink().size, LINK_LIMIT),
                         () -> Pal.accent,
@@ -97,12 +97,12 @@ public class BridgeRouter extends block {
                 int pos = Point2.pack(tile.x + dx, tile.y + dy);
                 newLinks.add(pos);
             }
-            WarpBridgeBuild build = (WarpBridgeBuild) tile.entity;
+            BridgeRouterBuild build = (BridgeRouterBuild) tile.entity;
             build.setLink(newLinks);
         } else if (value instanceof Integer) {
             // 点击单个方块配置
             int pos = (Integer) value;
-            WarpBridgeBuild build = (WarpBridgeBuild) tile.entity;
+            BridgeRouterBuild build = (BridgeRouterBuild) tile.entity;
             Seq<Integer> links = build.getLink();
             if (links.contains(pos)) {
                 links.remove(pos);
@@ -111,8 +111,8 @@ public class BridgeRouter extends block {
                 links.add(pos);
                 // 双向链接处理（移除目标端的反向连接）
                 Building target = world.build(pos);
-                if (target != null && target.block == this && target instanceof WarpBridgeBuild) {
-                    WarpBridgeBuild targetBuild = (WarpBridgeBuild) target;
+                if (target != null && target.block == this && target instanceof BridgeRouterBuild) {
+                    BridgeRouterBuild targetBuild = (BridgeRouterBuild) target;
                     Seq<Integer> targetLinks = targetBuild.getLink();
                     if (targetLinks.contains(tile.pos())) {
                         targetLinks.remove(tile.pos());
@@ -127,11 +127,11 @@ public class BridgeRouter extends block {
 
     @Override
     public TileEntity createTileEntity(Tile tile) {
-        return new WarpBridgeBuild(tile);
+        return new BridgeRouterBuild(tile);
     }
 
     // 自定义构建类（替代原 JavaScript 的 buildType）
-    public class WarpBridgeBuild extends BridgeRouter.BridgeBuild {
+    public class BridgeRouterBuild extends BridgeRouter.BridgeBuild {
         // 原脚本中的字段
         private Seq<Integer> links = new Seq<>();
         private float warmup = 0f;
@@ -140,7 +140,7 @@ public class BridgeRouter extends block {
         private transient Seq<TransportItem> transport = new Seq<>();
         private float powerLoss = 0f;
 
-        public WarpBridgeBuild(Tile tile) {
+        public BridgeRouterBuild(Tile tile) {
             super(tile);
             activeBridges.add(this);
         }
@@ -177,7 +177,7 @@ public class BridgeRouter extends block {
                 TransportItem t = transport.get(i);
                 if (--t.time <= 0) {
                     Building target = world.build(t.target);
-                    if (target != null && target.team == team && target.block == WarpBridge.this) {
+                    if (target != null && target.team == team && target.block == BridgeRouter.this) {
                         int accept = Math.min(t.amount, target.acceptStack(t.item, t.amount, this));
                         if (accept > 0) {
                             target.handleStack(t.item, accept, this);
@@ -220,7 +220,7 @@ public class BridgeRouter extends block {
                 for (int i = links.size - 1; i >= 0; i--) {
                     int pos = links.get(i);
                     Building target = world.build(pos);
-                    if (!(target instanceof WarpBridgeBuild) || target.team != team || !within(target, range)) {
+                    if (!(target instanceof BridgeRouterBuild) || target.team != team || !within(target, range)) {
                         links.remove(i);
                     }
                 }
@@ -232,7 +232,7 @@ public class BridgeRouter extends block {
                     do {
                         int pos = links.get(sendIndex);
                         Building target = world.build(pos);
-                        if (target != null && target.team == team && target.block == WarpBridge.this && within(target, range)) {
+                        if (target != null && target.team == team && target.block == BridgeRouter.this && within(target, range)) {
                             for (Item item : content.items()) {
                                 int amount = items.get(item);
                                 if (amount <= 0) continue;
@@ -271,7 +271,7 @@ public class BridgeRouter extends block {
             for (int i = 0; i < links.size; i++) {
                 int pos = links.get(i);
                 Building target = world.build(pos);
-                if (!(target instanceof WarpBridgeBuild) || target.team != team) continue;
+                if (!(target instanceof BridgeRouterBuild) || target.team != team) continue;
 
                 float dx = target.x - x;
                 float dy = target.y - y;
@@ -365,14 +365,14 @@ public class BridgeRouter extends block {
             // 绘制已有连接的目标
             for (int pos : links) {
                 Building target = world.build(pos);
-                if (target != null && target.block == WarpBridge.this && target.team == team) {
+                if (target != null && target.block == BridgeRouter.this && target.team == team) {
                     Drawf.select(target.x, target.y, target.block.size * 8 / 2f + 2, Pal.place);
                 }
             }
 
             // 处理其他桥指向本桥但本桥未连接的反向指示
             int myPos = pos();
-            for (WarpBridgeBuild other : activeBridges) {
+            for (BridgeRouterBuild other : activeBridges) {
                 if (other == this || other.team != team || !within(other, range)) continue;
                 boolean connected = links.contains(other.pos());
                 if (!connected && other.getLink().contains(myPos)) {
@@ -398,7 +398,7 @@ public class BridgeRouter extends block {
             }
 
             // 绘制反向连接线（其他桥指向本桥）
-            for (WarpBridgeBuild other : activeBridges) {
+            for (BridgeRouterBuild other : activeBridges) {
                 if (other == this || other.team != team) continue;
                 if (!other.getLink().contains(myPos)) continue;
                 if (links.contains(other.pos())) continue;
@@ -423,7 +423,7 @@ public class BridgeRouter extends block {
             }
 
             // 绘制其他桥的反向标记
-            for (WarpBridgeBuild other : activeBridges) {
+            for (BridgeRouterBuild other : activeBridges) {
                 if (other == this || other.team != team || !within(other, range)) continue;
                 if (!other.getLink().contains(myPos)) continue;
                 if (links.contains(other.pos())) continue;
@@ -447,7 +447,7 @@ public class BridgeRouter extends block {
             }
 
             // 绘制反向亮色线
-            for (WarpBridgeBuild other : activeBridges) {
+            for (BridgeRouterBuild other : activeBridges) {
                 if (other == this || other.team != team) continue;
                 if (!other.getLink().contains(myPos)) continue;
                 if (links.contains(other.pos())) continue;
@@ -469,7 +469,7 @@ public class BridgeRouter extends block {
                 if (target == null) continue;
                 drawMovingArrow(this, target, Pal.place, LINE_INSET1 - 2);
             }
-            for (WarpBridgeBuild other : activeBridges) {
+            for (BridgeRouterBuild other : activeBridges) {
                 if (other == this || other.team != team) continue;
                 if (!other.getLink().contains(myPos)) continue;
                 if (links.contains(other.pos())) continue;
@@ -511,7 +511,7 @@ public class BridgeRouter extends block {
                 links.clear();
                 return false;
             }
-            if (dst(other) <= range && other.team == team && other.block == WarpBridge.this) {
+            if (dst(other) <= range && other.team == team && other.block == BridgeRouter.this) {
                 configure(other.pos());
                 return false;
             }
