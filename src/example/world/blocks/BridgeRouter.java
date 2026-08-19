@@ -105,7 +105,7 @@ public class BridgeRouter extends StorageBlock {
         super.setBars();
         addBar("connections", (BridgeRouterBuild e) ->
             new Bar(
-                () -> core.bundle.format("bar.powerlines", e.getLink().size, linkLimit),
+                () -> Vars.core.bundle.format("bar.powerlines", e.getLink().size, linkLimit),
                 () -> Pal.accent,
                 () -> (float) e.getLink().size / linkLimit
             )
