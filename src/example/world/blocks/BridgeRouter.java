@@ -140,10 +140,13 @@ public class BridgeRouter extends StorageBlock {
         }
 
         public Seq<Integer> getLink() { return links; }
-        public void setLink(Seq<Integer> v) {
-            links = v == null ? new Seq<>() : v;
-            if (links.size > linkLimit) links.truncate(linkLimit);
-        }
+public void setLink(Seq<Integer> v) {
+    links = new Seq<>();
+    if (v != null) {
+        for (int i = 0; i < v.size; i++) links.add(v.get(i));
+    }
+    if (links.size > linkLimit) links.truncate(linkLimit);
+}
         public float getPowerLoss() { return powerLoss; }
 
         @Override
