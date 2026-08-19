@@ -119,29 +119,61 @@ public class BridgeRouter extends StorageBlock {
             Draw.reset();
         }
     
+        private void drawInput(Tile other) {
+            if (!linkValid(tile, other, false)) return;
+            boolean linked = other.pos() == link;
+    
+            Tmp.v2.trns(tile.angleTo(other), 2f);
+            float tx = tile.drawx(), ty = tile.drawy();
+            float ox = other.drawx(), oy = other.drawy();
+            float alpha = Math.abs((linked ? 100 : 0) - (Time.time * 2f) % 100f) / 100f;
+            float x = Mathf.lerp(ox, tx, alpha);
+            float y = Mathf.lerp(oy, ty, alpha);
+    
+            Tile otherLink = linked ? other : tile;
+            int rel = (linked ? tile : other).absoluteRelativeTo(otherLink.x, otherLink.y);
+    
+            Draw.color(Pal.gray);
+            Lines.stroke(2.5f);
+            Lines.square(ox, oy, 2f, 45f);
+            Lines.stroke(2.5f);
+            Lines.line(tx + Tmp.v2.x, ty + Tmp.v2.y, ox - Tmp.v2.x, oy - Tmp.v2.y);
+    
+            float color = (linked ? Pal.place : Pal.accent).toFloatBits();
+            Draw.color(color);
+            Lines.stroke(1f);
+            Lines.line(tx + Tmp.v2.x, ty + Tmp.v2.y, ox - Tmp.v2.x, oy - Tmp.v2.y);
+            Lines.square(ox, oy, 2f, 45f);
+            Draw.mixcol(color);
+            Draw.color();
+            Draw.rect("bridge-arrow", x, y, rel * 90);
+            Draw.mixcol();
+        }
+        
         @Override
-        public void drawConfigure() {
+        public void drawConfigure(){
+            Drawf.select(x, y, tile.block().size * tilesize / 2f + 2f, Pal.accent);
+            Drawf.dashCircle(x, y, range * tilesize, Pal.accent);
+            int r = range + tilesize;
+            for(int dx = -r; dx <= r; dx++){
+                for(int dy = -r; dy <= r; dy++){
+                    if(dx == 0 && dy == 0) continue;
+                    if(dx*dx + dy*dy > r*r) continue;
+                    Tile other = tile.nearby(dx, dy);
+                    if(other == null) continue;
+                    if(linkValid(tile, other)){
+                        boolean linked = other.pos() == link;
+                        Drawf.select(other.drawx(), other.drawy(),
+                            other.block().size * tilesize / 2f + 2f + (linked ? 0f : Mathf.absin(Time.time, 4f, 1f)),
+                            linked ? Pal.place : Pal.breakInvalid);
+                    }
+                }
+            }
             if (linkValid(tile, world.tile(link))) {
                 drawInput(world.tile(link));
             }
             incoming.each(pos -> drawInput(world.tile(pos)));
-             Drawf.select(x, y, tile.block().size * tilesize / 2f + 2f, Pal.accent);
-             Drawf.dashCircle(x, y, range * tilesize, Pal.accent);
-            int r = range;
-            for (int dx = -r; dx <= r; dx++) {
-                for (int dy = -r; dy <= r; dy++) {
-                    if (dx == 0 && dy == 0) continue;
-                    if (dx * dx + dy * dy > r * r) continue;
-                    Tile other = tile.nearby(dx, dy);
-                    if (other == null) continue;
-                    if (linkValid(tile, other)) {
-                        boolean linked = other.pos() == link;
-                        Drawf.select(other.drawx(), other.drawy(),
-                        other.block().size * tilesize / 2f + 2f + (linked ? 0f : Mathf.absin(Time.time, 4f, 1f)),
-                        linked ? Pal.place : Pal.breakInvalid);
-                    }
-                }
-            }
+            Draw.reset();
         }
         
         @Override
