@@ -77,4 +77,329 @@ public class BridgeRouter extends StorageBlock {
         super.drawPlace(x, y, rotation, valid);
         Drawf.dashCircle(x * tilesize, y * tilesize, range - tilesize, Pal.accent);
     }
+    
+    public boolean linkValid(Tile tile, Tile other){
+        return linkValid(tile, other, true);
+    }
+    
+    public boolean linkValid(Tile tile, Tile other, boolean checkDouble){
+        if(other == null || tile == null || !positionsValid(tile.x, tile.y, other.x, other.y)) return false;
+
+        return ((other.block() == tile.block() && tile.block() == this) || (!(tile.block() instanceof ItemBridge) && other.block() == this))
+            && (other.team() == tile.team() || tile.block() != this);
+    }
+    
+    public boolean positionsValid(int x1, int y1, int x2, int y2){
+        int dx = x1 - x2;
+        int dy = y1 - y2;
+        return (dx * dx + dy * dy) <= (range * range);
+    }
+    
+    @Override
+    public void init(){
+        super.init();
+        updateClipRadius((range + 0.5f) * tilesize);
+    }
+    
+    public class BridgeRouterBuild extends StorageBuild {
+        public int link = -1;
+        public IntSeq incoming = new IntSeq(false, 4);
+        public float warmup;
+        public float time = -8f, timeSpeed;
+        public boolean wasMoved, moved, hadValidLink;
+        public float transportCounter;
+    
+        @Override
+        public void pickedUp() {
+            link = -1;
+        }
+    
+        @Override
+        public void drawSelect() {
+            if (linkValid(tile, world.tile(link))) {
+                drawInput(world.tile(link));
+            }
+            incoming.each(pos -> drawInput(world.tile(pos)));
+            Draw.reset();
+        }
+    
+        private void drawInput(Tile other) {
+            if (!linkValid(tile, other, false)) return;
+            boolean linked = other.pos() == link;
+    
+            Tmp.v2.trns(tile.angleTo(other), 2f);
+            float tx = tile.drawx(), ty = tile.drawy();
+            float ox = other.drawx(), oy = other.drawy();
+            float alpha = Math.abs((linked ? 100 : 0) - (Time.time * 2f) % 100f) / 100f;
+            float x = Mathf.lerp(ox, tx, alpha);
+            float y = Mathf.lerp(oy, ty, alpha);
+    
+            Tile otherLink = linked ? other : tile;
+            int rel = (linked ? tile : other).absoluteRelativeTo(otherLink.x, otherLink.y);
+    
+            Draw.color(Pal.gray);
+            Lines.stroke(2.5f);
+            Lines.square(ox, oy, 2f, 45f);
+            Lines.stroke(2.5f);
+            Lines.line(tx + Tmp.v2.x, ty + Tmp.v2.y, ox - Tmp.v2.x, oy - Tmp.v2.y);
+    
+            float color = (linked ? Pal.place : Pal.accent).toFloatBits();
+            Draw.color(color);
+            Lines.stroke(1f);
+            Lines.line(tx + Tmp.v2.x, ty + Tmp.v2.y, ox - Tmp.v2.x, oy - Tmp.v2.y);
+            Lines.square(ox, oy, 2f, 45f);
+            Draw.mixcol(color);
+            Draw.color();
+            Draw.rect("bridge-arrow", x, y, rel * 90);
+            Draw.mixcol();
+        }
+        
+        @Override
+        public void drawConfigure(){
+            Drawf.select(x, y, tile.block().size * tilesize / 2f + 2f, Pal.accent);
+            int r = range;
+            for(int dx = -r; dx <= r; dx++){
+                for(int dy = -r; dy <= r; dy++){
+                    if(dx == 0 && dy == 0) continue;
+                    if(dx*dx + dy*dy > r*r) continue;
+                    Tile other = tile.nearby(dx, dy);
+                    if(other == null) continue;
+                    if(linkValid(tile, other)){
+                        boolean linked = other.pos() == link;
+                        Drawf.select(other.drawx(), other.drawy(),
+                            other.block().size * tilesize / 2f + 2f + (linked ? 0f : Mathf.absin(Time.time, 4f, 1f)),
+                            linked ? Pal.place : Pal.breakInvalid);
+                    }
+                }
+            }
+        }
+        
+        @Override
+        public boolean onConfigureBuildTapped(Building other){
+            //reverse connection
+            if(other instanceof BridgeRouterBuild b && b.link == pos()){
+                configure(other.pos());
+                other.configure(-1);
+                return true;
+            }
+
+            if(linkValid(tile, other.tile)){
+                if(link == other.pos()){
+                    configure(-1);
+                }else{
+                    configure(other.pos());
+                }
+                return false;
+            }
+            return true;
+        }
+        
+        public void checkIncoming(){
+            int idx = 0;
+            while(idx < incoming.size){
+                int i = incoming.items[idx];
+                Tile other = world.tile(i);
+                if(!linkValid(tile, other, false) || ((BridgeRouterBuild)other.build).link != tile.pos()){
+                    incoming.removeIndex(idx);
+                    idx --;
+                }
+                idx ++;
+            }
+        }
+        
+        @Override
+        public void updateTile(){
+            if(timer(timerCheckMoved, 30f)){
+                wasMoved = moved;
+                moved = false;
+            }
+
+            timeSpeed = Mathf.approachDelta(timeSpeed, wasMoved ? 1f : 0f, 1f / 60f);
+
+            time += timeSpeed * delta();
+
+            checkIncoming();
+
+            Tile other = world.tile(link);
+            hadValidLink = linkValid(tile, other);
+
+            if(!hadValidLink){
+                doDump();
+                warmup = 0f;
+            }else{
+                var inc = ((BridgeRouterBuild)other.build).incoming;
+                int pos = tile.pos();
+                if(!inc.contains(pos)){
+                    inc.add(pos);
+                }
+
+                warmup = Mathf.approachDelta(warmup, efficiency, 1f / 30f);
+                updateTransport(other.build);
+            }
+        }
+        
+        public void doDump(){
+             dumpAccumulate();
+        }
+        
+        public void updateTransport(Building other){
+            transportCounter += edelta();
+            while(transportCounter >= transportTime){
+                Item item = items.take();
+                if(item != null && other.acceptItem(this, item)){
+                    other.handleItem(this, item);
+                    moved = true;
+                }else if(item != null){
+                    items.add(item, 1);
+                    items.undoFlow(item);
+                }
+                transportCounter -= transportTime;
+            }
+        }
+        
+        @Override
+        public void draw(){
+            super.draw();
+
+            Draw.z(Layer.power);
+
+            Tile other = world.tile(link);
+            if(!linkValid(tile, other)) return;
+
+            if(Mathf.zero(Renderer.bridgeOpacity)) return;
+
+            int i = relativeTo(other.x, other.y);
+
+            if(pulse){
+                Draw.color(Color.white, Color.black, Mathf.absin(Time.time, 6f, 0.07f));
+            }
+
+            float warmup = hasPower ? this.warmup : 1f;
+
+            Draw.alpha((fadeIn ? Math.max(warmup, 0.25f) : 1f) * Renderer.bridgeOpacity);
+
+            Draw.rect(endRegion, x, y, i * 90 + 90);
+            Draw.rect(endRegion, other.drawx(), other.drawy(), i * 90 + 270);
+
+            Lines.stroke(bridgeWidth);
+
+            Tmp.v1.set(x, y).sub(other.worldx(), other.worldy()).setLength(tilesize/2f).scl(-1f);
+
+            Lines.line(bridgeRegion,
+            x + Tmp.v1.x,
+            y + Tmp.v1.y,
+            other.worldx() - Tmp.v1.x,
+            other.worldy() - Tmp.v1.y, false);
+
+            int dist = Math.max(Math.abs(other.x - tile.x), Math.abs(other.y - tile.y)) - 1;
+
+            Draw.color();
+
+            if(Lod.l1){
+                int arrows = (int)(dist * tilesize / arrowSpacing), dx = Geometry.d4x(i), dy = Geometry.d4y(i);
+
+                for(int a = 0; a < arrows; a++){
+                    Draw.alpha(Mathf.absin(a - time / arrowTimeScl, arrowPeriod, 1f) * warmup * Renderer.bridgeOpacity * Lod.alpha1);
+                    Draw.rect(arrowRegion,
+                    x + dx * (tilesize / 2f + a * arrowSpacing + arrowOffset),
+                    y + dy * (tilesize / 2f + a * arrowSpacing + arrowOffset),
+                    i * 90f);
+                }
+            }
+
+            Draw.reset();
+        }
+        
+        @Override
+        public boolean acceptItem(Building source, Item item){
+            return hasItems && team == source.team && items.total() < itemCapacity && checkAccept(source, world.tile(link));
+        }
+        
+        protected boolean checkAccept(Building source, Tile link){
+            if(tile == null || linked(source)) return true;
+
+            if(linkValid(tile, link)){
+                int rel = relativeTo(link);
+                var facing = Edges.getFacingEdge(source, this);
+                int rel2 = facing == null ? -1 : relativeTo(facing);
+                return rel != rel2;
+            }
+
+            return false;
+        }
+        
+        protected boolean linked(Building source){
+            return source instanceof BridgeRouterBuild && linkValid(source.tile, tile) && ((BridgeRouterBuild)source).link == pos();
+        }
+        
+        @Override
+        public boolean canDump(Building to, Item item){
+            return checkDump(to);
+        }
+        
+        protected boolean checkDump(Building to){
+            Tile other = world.tile(link);
+            if(!linkValid(tile, other)){
+                Tile edge = Edges.getFacingEdge(to.tile, tile);
+                int i = relativeTo(edge.x, edge.y);
+
+                for(int j = 0; j < incoming.size; j++){
+                    int v = incoming.items[j];
+                    if(relativeTo(Point2.x(v), Point2.y(v)) == i){
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            int rel = relativeTo(other.x, other.y);
+            int rel2 = relativeTo(to.tileX(), to.tileY());
+
+            return rel != rel2;
+        }
+        
+        @Override
+        public boolean shouldConsume(){
+            return hadValidLink && enabled;
+        }
+
+        @Override
+        public Point2 config(){
+            return Point2.unpack(link).sub(tile.x, tile.y);
+        }
+
+        @Override
+        public byte version(){
+            return 1;
+        }
+        
+        @Override
+        public void write(Writes write){
+            super.write(write);
+            write.i(link);
+            write.f(warmup);
+            write.b(incoming.size);
+
+            for(int i = 0; i < incoming.size; i++){
+                write.i(incoming.items[i]);
+            }
+
+            write.bool(wasMoved || moved);
+        }
+        
+        @Override
+        public void read(Reads read, byte revision){
+            super.read(read, revision);
+            link = read.i();
+            warmup = read.f();
+            byte links = read.b();
+            for(int i = 0; i < links; i++){
+                incoming.add(read.i());
+            }
+
+            if(revision >= 1){
+                wasMoved = moved = read.bool();
+            }
+        }
+    }
 }
