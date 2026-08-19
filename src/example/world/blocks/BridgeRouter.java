@@ -71,29 +71,54 @@ public class BridgeRouter extends StorageBlock {
             tile.setLink(links);
         });
 
-        // 配置类型：Integer（单个目标方块位置）
-        config(Integer.class, (BridgeRouterBuild tile, Integer value) -> {
-            int pos = value;
-            Seq<Integer> links = tile.getLink();
-            Integer intObj = pos;
-            if (links.contains(intObj)) {
-                links.remove(intObj);
-            } else {
-                if (links.size >= linkLimit) return;
-                links.add(intObj);
-                Building targetBuild = world.build(pos);
-                if (targetBuild != null && targetBuild.block == BridgeRouter.this) {
-                    BridgeRouterBuild targetTile = (BridgeRouterBuild) targetBuild;
-                    Seq<Integer> targetLinks = targetTile.getLink();
-                    Integer myPos = tile.pos();
-                    if (targetLinks.contains(myPos)) {
-                        targetLinks.remove(myPos);
-                        targetTile.setLink(targetLinks);
-                    }
-                }
-            }
-            tile.setLink(links);
-        });
+config(Integer.class, (BridgeRouterBuild tile, Integer value) -> {
+
+    if (value == null) return;
+
+    int targetPos = value;
+
+    // 不能连接自己
+    if (targetPos == tile.pos()) return;
+
+    Building targetBuild = world.build(targetPos);
+
+    // 目标不存在
+    if (targetBuild == null) return;
+
+    // 目标必须是 BridgeRouter
+    if (targetBuild.block != BridgeRouter.this) return;
+
+    // 必须是同队
+    if (targetBuild.team != tile.team) return;
+
+    // 必须在范围内
+    if (!tile.within(targetBuild, range)) return;
+
+    Seq<Integer> links = tile.getLink();
+
+    // 已经连接 -> 取消连接
+    if (links.contains(targetPos)) {
+        links.remove(targetPos);
+        tile.setLink(links);
+        return;
+    }
+
+    // 已经达到连接上限
+    if (links.size >= linkLimit) return;
+
+    // 添加连接
+    links.add(targetPos);
+    tile.setLink(links);
+
+    // 如果目标反向连接了自己，则取消目标的反向连接
+    BridgeRouterBuild targetTile = (BridgeRouterBuild) targetBuild;
+    Seq<Integer> targetLinks = targetTile.getLink();
+
+    if (targetLinks.contains(tile.pos())) {
+        targetLinks.remove(tile.pos());
+        targetTile.setLink(targetLinks);
+    }
+});
     }
 
     @Override
@@ -136,7 +161,6 @@ public void setBars() {
         private Seq<TransportItem> transport = new Seq<>();
         private float powerLoss = 0f;
         private float creationTime;
-        private boolean configuring = false;
 
         private static class TransportItem {
             Item item;
@@ -554,25 +578,34 @@ public void created() {
 
 @Override
 public boolean onConfigureBuildTapped(Building other) {
+    Building selected = control.input.config.getSelected();
 
-    // 点击自己：进入/退出本桥的配置模式
+    if (other != this && (selected == null || selected != this)) {
+        return false;
+    }
+
     if (other == this) {
-        configuring = !configuring;
+        setLink(new Seq<>());
+
+        int myPos = pos();
+        for (BridgeRouterBuild b : activeBridges) {
+            if (b != this && b.getLink().contains(myPos)) {
+                b.getLink().remove(myPos);
+                b.setLink(b.getLink());
+            }
+        }
         return false;
     }
 
-    // 当前桥没有进入配置模式，不允许连接其他桥
-    if (!configuring) {
-        return false;
-    }
-
-    // 配置模式下点击其他 BridgeRouter
     if (other != null
         && other.team == team
         && other.block == BridgeRouter.this
         && within(other, range)) {
 
-        configure(other.pos());
+        if (selected == this) {
+            configure(other.pos());
+        }
+
         return false;
     }
 
