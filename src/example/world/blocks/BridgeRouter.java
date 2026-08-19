@@ -19,8 +19,8 @@ import mindustry.world.meta.*;
 import static mindustry.Vars.*;
 
 public class BridgeRouter extends StorageBlock {
-    // 常量（全部 static final）
-    public static final int range = 64;
+    // --- 修改：增加 range 到 10 格，便于测试 ---
+    public static final int range = 160;          // 10 格（原 64 像素 = 4 格）
     public static final int linkLimit = 4;
     public static final float warmupSpeed = 0.05f;
     public static final float transportDelay = 60f;
@@ -53,9 +53,41 @@ public class BridgeRouter extends StorageBlock {
         saveConfig = true;
         itemCapacity = 30;
         group = BlockGroup.transportation;
-        // priority 不需要显式设置，默认即可
         envEnabled = Env.any;
         allowConfigInventory = false;
+
+        // --- 配置处理器注册（确保正确触发）---
+        config(Integer.class, (BridgeRouterBuild tile, Integer pos) -> {
+            Seq<Integer> links = tile.links;
+            if (links.contains(pos)) {
+                links.remove(pos);
+                // 同时断开对方对自己的链接（保持单向）
+                Building other = world.build(pos);
+                if (other instanceof BridgeRouterBuild b && b.team == tile.team) {
+                    b.links.remove(tile.pos());
+                }
+            } else {
+                if (links.size >= linkLimit) return;
+                links.add(pos);
+                // 如果对方已有本桥链接，移除对方的反向链接（避免双向）
+                Building other = world.build(pos);
+                if (other instanceof BridgeRouterBuild b && b.team == tile.team) {
+                    b.links.remove(tile.pos());
+                }
+            }
+            tile.setLinks(links);
+        });
+
+        config(IntSeq.class, (BridgeRouterBuild tile, IntSeq seq) -> {
+            Seq<Integer> newLinks = new Seq<>();
+            for (int i = 0; i < seq.size; i += 2) {
+                int x = seq.get(i) + tile.tileX();
+                int y = seq.get(i + 1) + tile.tileY();
+                int pos = Point2.pack(x, y);
+                newLinks.add(pos);
+            }
+            tile.setLinks(newLinks);
+        });
     }
 
     @Override
@@ -87,39 +119,6 @@ public class BridgeRouter extends StorageBlock {
     @Override
     public boolean outputsItems() {
         return true;
-    }
-
-    // config(IntSeq)
-    public void config(IntSeq seq, BridgeRouterBuild tile) {
-        Seq<Integer> newLinks = new Seq<>();
-        for (int i = 0; i < seq.size; i += 2) {
-            int x = seq.get(i) + tile.tileX();
-            int y = seq.get(i + 1) + tile.tileY();
-            int pos = Point2.pack(x, y);
-            newLinks.add(pos);
-        }
-        tile.setLinks(newLinks);
-    }
-
-    // config(Integer)
-    public void config(Integer value, BridgeRouterBuild tile) {
-        int pos = value;
-        Seq<Integer> links = tile.links;
-        if (links.contains(pos)) {
-            links.remove(pos);
-            Building other = world.build(pos);
-            if (other instanceof BridgeRouterBuild b && b.team == tile.team) {
-                b.links.remove(tile.pos());
-            }
-        } else {
-            if (links.size >= linkLimit) return;
-            links.add(pos);
-            Building other = world.build(pos);
-            if (other instanceof BridgeRouterBuild b && b.team == tile.team) {
-                b.links.remove(tile.pos());
-            }
-        }
-        tile.setLinks(links);
     }
 
     public class BridgeRouterBuild extends StorageBuild {
@@ -155,6 +154,7 @@ public class BridgeRouter extends StorageBlock {
         public void updateTile() {
             super.updateTile();
 
+            // 处理运输队列
             for (int i = transportQueue.size - 1; i >= 0; i--) {
                 TransportItem t = transportQueue.get(i);
                 t.time -= edelta();
@@ -185,6 +185,7 @@ public class BridgeRouter extends StorageBlock {
             }
 
             if (Time.time % FRAME_DELAY < 1) {
+                // 清理无效链接
                 for (int i = links.size - 1; i >= 0; i--) {
                     int pos = links.get(i);
                     if (!linkValid(pos)) {
@@ -226,73 +227,93 @@ public class BridgeRouter extends StorageBlock {
             return super.acceptItem(source, item);
         }
 
-        // 绘制所有连接线
-        private void drawLinks() {
-            if (links.isEmpty()) return;
+        // --- 修改：绘制自己的链接 + 所有指向自己的链接（双向视图）---
+        private void drawAllLinks() {
+            // 1. 绘制自己的链接
             for (int pos : links) {
                 Building target = world.build(pos);
                 if (target == null || target.team != team || target.block != BridgeRouter.this) continue;
+                drawLinkLine(this, target);
+            }
 
-                float loss = getPowerLoss();
-                Color outer = LINE_COLOR_OUTER.lerp(POWER_LOSS_COLOR, loss);
-                Color inner = LINE_COLOR_INNER.lerp(POWER_LOSS_INNER_COLOR, efficiency <= 0 ? 1 : 0);
-
-                float dx = target.x - x, dy = target.y - y;
-                float len = Mathf.dst(dx, dy);
-                if (len == 0) continue;
-                float ux = dx / len, uy = dy / len;
-                float nx = -uy, ny = ux;
-                float halfWidth = LINE_WIDTH_INNER / 2f;
-
-                float inset = LINE_INSET;
-                float sx = x + ux * inset;
-                float sy = y + uy * inset;
-                float ex = target.x - ux * inset;
-                float ey = target.y - uy * inset;
-
-                float ext = OUTER_EXTEND;
-                float osx = sx - ux * ext, osy = sy - uy * ext;
-                float oex = ex + ux * ext, oey = ey + uy * ext;
-
-                Draw.color(outer);
-                Lines.stroke(LINE_WIDTH_OUTER);
-                Lines.line(osx + nx * halfWidth, osy + ny * halfWidth, oex + nx * halfWidth, oey + ny * halfWidth);
-                Lines.line(osx - nx * halfWidth, osy - ny * halfWidth, oex - nx * halfWidth, oey - ny * halfWidth);
-
-                Draw.color(inner);
-                Lines.stroke(LINE_WIDTH_INNER);
-                Lines.line(sx, sy, ex, ey);
-
-                Draw.color(outer);
-                Lines.stroke(CAP_LINE_WIDTH);
-                Lines.line(osx + nx * halfWidth, osy + ny * halfWidth, osx - nx * halfWidth, osy - ny * halfWidth);
-                Lines.line(oex + nx * halfWidth, oey + ny * halfWidth, oex - nx * halfWidth, oey - ny * halfWidth);
-
-                float startX = x + ux * inset;
-                float startY = y + uy * inset;
-                float endX = target.x - ux * inset;
-                float endY = target.y - uy * inset;
-                float bridgeLen = Mathf.dst(endX - startX, endY - startY);
-                int arrows = (int) (bridgeLen / arrowSpacing);
-                if (arrows > 0) {
-                    float angle = Mathf.angle(dx, dy);
-                    float rad = angle * Mathf.degRad;
-                    boolean powered = efficiency > 0;
-                    for (int a = 0; a < arrows; a++) {
-                        float px = startX + ux * a * arrowSpacing;
-                        float py = startY + uy * a * arrowSpacing;
-                        float timeScl = powered ? arrowTimeScl : 4.2f;
-                        float alpha = Mathf.absin(a - Time.time / timeScl, arrowPeriod, 1f);
-                        if (alpha <= 0.01f) continue;
-                        float finalAlpha = powered ? alpha : 0.5f;
-                        Color color = ARROW_COLOR.lerp(POWER_LOSS_COLOR, loss);
-                        Draw.color(color, finalAlpha);
-                        Fill.tri(
-                            px + Mathf.cos(rad) * arrowSize, py + Mathf.sin(rad) * arrowSize,
-                            px + Mathf.cos(rad + Mathf.PI * 0.5f) * arrowSize, py + Mathf.sin(rad + Mathf.PI * 0.5f) * arrowSize,
-                            px + Mathf.cos(rad - Mathf.PI * 0.5f) * arrowSize, py + Mathf.sin(rad - Mathf.PI * 0.5f) * arrowSize
-                        );
+            // 2. 绘制所有指向本桥的链接（即使对方没有本桥的链接）
+            for (Tile tile : world.tiles) {
+                Building other = tile.build;
+                if (other == null || other == this || other.team != team) continue;
+                if (other.block == BridgeRouter.this) {
+                    BridgeRouterBuild b = (BridgeRouterBuild) other;
+                    if (b.links.contains(pos())) {
+                        // 对方已链接本桥
+                        drawLinkLine(other, this);
                     }
+                    // 注意：即使对方没有链接本桥，我们也可以选择不画，以保持整洁。
+                    // 这里只画已建立链接的双向。
+                }
+            }
+        }
+
+        // 绘制单条连接线（内部方法）
+        private void drawLinkLine(Building from, Building to) {
+            float loss = getPowerLoss();
+            Color outer = LINE_COLOR_OUTER.lerp(POWER_LOSS_COLOR, loss);
+            Color inner = LINE_COLOR_INNER.lerp(POWER_LOSS_INNER_COLOR, efficiency <= 0 ? 1 : 0);
+
+            float dx = to.x - from.x, dy = to.y - from.y;
+            float len = Mathf.dst(dx, dy);
+            if (len == 0) return;
+            float ux = dx / len, uy = dy / len;
+            float nx = -uy, ny = ux;
+            float halfWidth = LINE_WIDTH_INNER / 2f;
+
+            float inset = LINE_INSET;
+            float sx = from.x + ux * inset;
+            float sy = from.y + uy * inset;
+            float ex = to.x - ux * inset;
+            float ey = to.y - uy * inset;
+
+            float ext = OUTER_EXTEND;
+            float osx = sx - ux * ext, osy = sy - uy * ext;
+            float oex = ex + ux * ext, oey = ey + uy * ext;
+
+            Draw.color(outer);
+            Lines.stroke(LINE_WIDTH_OUTER);
+            Lines.line(osx + nx * halfWidth, osy + ny * halfWidth, oex + nx * halfWidth, oey + ny * halfWidth);
+            Lines.line(osx - nx * halfWidth, osy - ny * halfWidth, oex - nx * halfWidth, oey - ny * halfWidth);
+
+            Draw.color(inner);
+            Lines.stroke(LINE_WIDTH_INNER);
+            Lines.line(sx, sy, ex, ey);
+
+            Draw.color(outer);
+            Lines.stroke(CAP_LINE_WIDTH);
+            Lines.line(osx + nx * halfWidth, osy + ny * halfWidth, osx - nx * halfWidth, osy - ny * halfWidth);
+            Lines.line(oex + nx * halfWidth, oey + ny * halfWidth, oex - nx * halfWidth, oey - ny * halfWidth);
+
+            // 流动箭头
+            float startX = from.x + ux * inset;
+            float startY = from.y + uy * inset;
+            float endX = to.x - ux * inset;
+            float endY = to.y - uy * inset;
+            float bridgeLen = Mathf.dst(endX - startX, endY - startY);
+            int arrows = (int) (bridgeLen / arrowSpacing);
+            if (arrows > 0) {
+                float angle = Mathf.angle(dx, dy);
+                float rad = angle * Mathf.degRad;
+                boolean powered = efficiency > 0;
+                for (int a = 0; a < arrows; a++) {
+                    float px = startX + ux * a * arrowSpacing;
+                    float py = startY + uy * a * arrowSpacing;
+                    float timeScl = powered ? arrowTimeScl : 4.2f;
+                    float alpha = Mathf.absin(a - Time.time / timeScl, arrowPeriod, 1f);
+                    if (alpha <= 0.01f) continue;
+                    float finalAlpha = powered ? alpha : 0.5f;
+                    Color color = ARROW_COLOR.lerp(POWER_LOSS_COLOR, loss);
+                    Draw.color(color, finalAlpha);
+                    Fill.tri(
+                        px + Mathf.cos(rad) * arrowSize, py + Mathf.sin(rad) * arrowSize,
+                        px + Mathf.cos(rad + Mathf.PI * 0.5f) * arrowSize, py + Mathf.sin(rad + Mathf.PI * 0.5f) * arrowSize,
+                        px + Mathf.cos(rad - Mathf.PI * 0.5f) * arrowSize, py + Mathf.sin(rad - Mathf.PI * 0.5f) * arrowSize
+                    );
                 }
             }
         }
@@ -301,15 +322,17 @@ public class BridgeRouter extends StorageBlock {
         public void draw() {
             super.draw();
             Draw.z(Layer.block + 1);
-            drawLinks();
+            drawAllLinks();   // 使用新方法绘制双向链接
             Draw.z(Layer.block);
         }
 
         @Override
         public void drawConfigure() {
+            // 配置视图保持不变（显示所有可连接对象）
             Drawf.dashCircle(x, y, range - tilesize, Pal.accent);
 
             float pulse = Mathf.absin(Time.time, 4f, 1f);
+            // 高亮已链接的目标
             for (int pos : links) {
                 if (linkValid(pos)) {
                     Building target = world.build(pos);
@@ -319,7 +342,7 @@ public class BridgeRouter extends StorageBlock {
                 }
             }
 
-            // 遍历所有地图上的建筑，找出同类桥
+            // 显示范围内其他同类桥
             for (Tile tile : world.tiles) {
                 Building other = tile.build;
                 if (other == null || other == this || other.team != team) continue;
@@ -332,25 +355,26 @@ public class BridgeRouter extends StorageBlock {
             }
 
             Draw.z(Layer.block + 1);
+            // 绘制所有链接线（双向）
             for (int pos : links) {
                 if (linkValid(pos)) {
                     Building target = world.build(pos);
                     if (target != null) {
-                        drawConnectionLine(this, target, Pal.accent, 1f);
+                        drawLinkLine(this, target);
                     }
                 }
             }
-            // 绘制其他桥指向自己的连接线（提示）
             for (Tile tile : world.tiles) {
                 Building other = tile.build;
                 if (other == null || other == this || other.team != team) continue;
                 if (other.block == BridgeRouter.this && other.<BridgeRouterBuild>as().links.contains(pos())) {
                     if (!links.contains(other.pos())) {
-                        drawConnectionLine(other, this, Pal.accent, 1f);
+                        drawLinkLine(other, this);
                     }
                 }
             }
 
+            // 流动箭头（仅自己的链接）
             for (int pos : links) {
                 if (linkValid(pos)) {
                     Building target = world.build(pos);
@@ -362,22 +386,8 @@ public class BridgeRouter extends StorageBlock {
             Draw.reset();
         }
 
-        private void drawConnectionLine(Building from, Building to, Color color, float alpha) {
-            float dx = to.x - from.x, dy = to.y - from.y;
-            float dist = Mathf.dst(dx, dy);
-            if (dist == 0) return;
-            float ux = dx / dist, uy = dy / dist;
-            float sx = from.x + ux * LINE_INSET1;
-            float sy = from.y + uy * LINE_INSET1;
-            float ex = to.x - ux * LINE_INSET1;
-            float ey = to.y - uy * LINE_INSET1;
-            Draw.color(color, alpha);
-            Lines.stroke(2f);
-            Lines.line(sx, sy, ex, ey);
-            Draw.color();
-        }
-
         private void drawMovingArrow(Building from, Building to, Color color) {
+            // 与之前相同，保留简化箭头
             float dx = to.x - from.x, dy = to.y - from.y;
             float dist = Mathf.dst(dx, dy);
             if (dist == 0) return;
@@ -408,6 +418,7 @@ public class BridgeRouter extends StorageBlock {
                 return false;
             }
             if (other != null && other.team == team && other.block == BridgeRouter.this && within(other, range)) {
+                // 切换链接
                 configure(other.pos());
                 return false;
             }
