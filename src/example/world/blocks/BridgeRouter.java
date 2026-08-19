@@ -59,7 +59,7 @@ public class BridgeRouter extends StorageBlock {
         config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> tile.link = Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
         config(Integer.class, (BridgeRouterBuild tile, Integer i) -> tile.link = i);
     }
-    public static class BridgeRouterBuild extends StorageBuild {
+    public class BridgeRouterBuild extends StorageBuild {
         public int link;
     }
 }
