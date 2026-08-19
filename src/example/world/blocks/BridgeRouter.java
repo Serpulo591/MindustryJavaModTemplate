@@ -1,4 +1,4 @@
-package mindustry.world.blocks.defense;
+package mindustry.world.blocks;
 
 import arc.Graphics.*;
 import arc.Graphics.Cursor.*;
@@ -9,7 +9,6 @@ import arc.math.geom.*;
 import arc.struct.*;
 import arc.util.*;
 import arc.util.io.*;
-import mindustry.annotations.Annotations.*;
 import mindustry.content.*;
 import mindustry.entities.*;
 import mindustry.entities.units.*;
@@ -25,7 +24,6 @@ public class BridgeRouter extends Wall{
     public final int timerToggle = timers++;
     public Effect openfx = Fx.Dooropen;
     public Effect closefx = Fx.Doorclose;
-    public Sound BridgeRouterSound = Sounds.Door;
     public boolean chainEffect = false;
     public @Load("@-open") TextureRegion openRegion;
 
@@ -37,7 +35,6 @@ public class BridgeRouter extends Wall{
 
         config(Boolean.class, (BridgeRouterBuild base, Boolean open) -> {
             if(!world.isGenerating()){
-                BridgeRouterSound.at(base);
                 base.effect();
             }
 
