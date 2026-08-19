@@ -557,33 +557,35 @@ public void created() {
 @Override
 public boolean onConfigureBuildTapped(Building other) {
 
-    // 点击当前桥自己
+    // 点击自己：清空自己的链接，并清除其他桥指向自己的链接
     if (other == this) {
-        // 清除自己的连接
-        setLink(new Seq<>());
-
-        // 清除其他桥指向自己的连接
         int myPos = pos();
 
-        for (BridgeRouterBuild b : activeBridges) {
-            if (b != this && b.getLink().contains(myPos)) {
-                Seq<Integer> otherLinks = b.getLink();
-                otherLinks.remove(myPos);
+        setLink(new Seq<>());
+
+        Seq<BridgeRouterBuild> copy = new Seq<>(activeBridges);
+
+        for (BridgeRouterBuild b : copy) {
+            if (b == this) continue;
+
+            Seq<Integer> otherLinks = b.getLink();
+
+            if (otherLinks.contains(myPos)) {
+                otherLinks.removeValue(myPos);
                 b.setLink(otherLinks);
             }
         }
 
-        return true;
+        return false;
     }
 
-    // 点击其他建筑时，必须确认当前配置选择对象就是自己
+    // 只有当前配置对象就是自己时，才允许点击其他桥
     Building selected = control.input.config.getSelected();
 
     if (selected != this) {
         return false;
     }
 
-    // 只允许连接 BridgeRouter
     if (other == null
         || other == this
         || other.team != team
@@ -592,10 +594,9 @@ public boolean onConfigureBuildTapped(Building other) {
         return false;
     }
 
-    // 添加/删除目标连接
     configure(other.pos());
 
-    return true;
+    return false;
 }
 
 @Override
