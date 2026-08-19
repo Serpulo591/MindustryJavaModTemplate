@@ -60,10 +60,6 @@ public class BridgeRouter extends StorageBlock {
         config(Integer.class, (BridgeRouterBuild tile, Integer i) -> tile.link = i);
     }
     
-    public class BridgeRouterBuild extends StorageBuild {
-        public int link;
-    }
-    
     @Override
     public void setStats() {
         super.setStats();
