@@ -298,15 +298,6 @@ public void onRemoved() {
                 drawLinkLine(this, target);
             }
 
-            // 2. 绘制指向自己的链接（从别的桥指向我）
-            for (BridgeRouterBuild other : activeBridges) {
-                if (other == this || other.team != team) continue;
-                if (other.getLink().contains(pos())) {
-                    drawLinkLine(other, this);
-                }
-            }
-        }
-
         // 绘制单条连接线（含箭头）
         private void drawLinkLine(Building from, Building to) {
             float loss = getPowerLoss();
