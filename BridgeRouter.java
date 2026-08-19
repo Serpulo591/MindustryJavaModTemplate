@@ -580,7 +580,7 @@ public boolean onConfigureBuildTapped(Building other) {
             Seq<Integer> otherLinks = b.getLink();
 
             if (otherLinks.contains(myPos)) {
-                int index = otherLinks.indexOf(myPos);
+                int index = otherLinks.removeValue((Object)myPos);
                 if(index >= 0){
                     otherLinks.remove(index);
                 }
