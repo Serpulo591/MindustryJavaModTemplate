@@ -26,9 +26,7 @@ public class BridgeRouter extends Block{
 
     public int range;
     public float transportTime;
-    public @Load("@-end") TextureRegion endRegion;
-    public @Load("@-bridge") TextureRegion bridgeRegion;
-    public @Load("@-arrow") TextureRegion arrowRegion;
+    public TextureRegion endRegion, bridgeRegion, arrowRegion;
 
     public boolean fadeIn = true;
     public boolean moveArrows = true;
@@ -73,7 +71,15 @@ public class BridgeRouter extends Block{
             stats.add(Stat.itemsMoved, 60f / transportTime, StatUnit.itemsSecond);
         }
     }
-
+    
+@Override
+public void load() {
+    super.load();
+    endRegion = Core.atlas.find(name + "-end");
+    bridgeRegion = Core.atlas.find(name + "-bridge");
+    arrowRegion = Core.atlas.find(name + "-arrow");
+}
+    
     private static int currentFindX, currentFindY;
     private static BuildPlan currentPlan;
     private static final Boolf<BuildPlan> planFinder = other -> other.block == currentPlan.block && currentPlan != other && currentFindX == other.x && currentFindY == other.y;
