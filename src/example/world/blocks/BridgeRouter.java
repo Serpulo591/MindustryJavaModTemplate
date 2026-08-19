@@ -29,6 +29,9 @@ public class BridgeRouter extends StorageBlock {
     public final int timerCheckMoved = timers ++;
     public int range;
     public float transportTime;
+    public @Load("@-end") TextureRegion endRegion;
+    public @Load("@-bridge") TextureRegion bridgeRegion;
+    public @Load("@-arrow") TextureRegion arrowRegion;
     public boolean fadeIn = true;
     public boolean moveArrows = true;
     public boolean pulse = false;
