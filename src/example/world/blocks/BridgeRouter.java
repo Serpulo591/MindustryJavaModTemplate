@@ -162,7 +162,7 @@ public void drawConfigure() {
         if (!linkValid(tile, other.tile)) continue;
         
         boolean linked = other.pos() == link;
-        Drawf.select(other.drawx(), other.drawy(),
+        Drawf.select(other.x, other.y,
             other.block.size * tilesize / 2f + 2f + (linked ? 0f : Mathf.absin(Time.time, 4f, 1f)),
             linked ? Pal.place : Pal.breakInvalid);
     }
