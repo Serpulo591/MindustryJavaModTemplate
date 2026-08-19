@@ -167,22 +167,8 @@ public void setBars() {
 @Override
 public void created() {
     super.created();
-    int myPos = pos();
-    // 先加入列表，以便后续遍历
+    creationTime = Time.time;
     activeBridges.add(this);
-    
-    // 延迟 1 帧执行，确保所有因放置触发的自动添加已完成
-    Time.runTask(1f, () -> {
-        // 1. 清空自己的链接（如果有被自动添加的）
-        setLink(new Seq<>());
-        // 2. 清除所有其他方块链接中指向自己的
-        for (BridgeRouterBuild b : activeBridges) {
-            if (b != this && b.getLink().contains(myPos)) {
-                b.getLink().remove(myPos);
-                b.setLink(b.getLink()); // 触发更新
-            }
-        }
-    });
 }
 
         @Override
@@ -567,18 +553,30 @@ public void created() {
 
 @Override
 public boolean onConfigureBuildTapped(Building other) {
-    // 如果这个桥本身刚放下（0.5秒内），直接忽略所有操作
+    // 如果这个桥自身刚放下（0.5秒内），忽略一切操作
     if (Time.time - this.creationTime < 30f) {
         return false;
     }
 
     if (other == this) {
+        // 点击自身：清空所有链接（包括指向自己的）
         setLink(new Seq<>());
+        int myPos = pos();
+        for (BridgeRouterBuild b : activeBridges) {
+            if (b != this && b.getLink().contains(myPos)) {
+                b.getLink().remove(myPos);
+                b.setLink(b.getLink());
+            }
+        }
         return false;
     }
 
+    // 关键：只有当前处于配置模式（玩家主动点击了某个方块）才允许建立链接
     if (other != null && other.team == team && other.block == BridgeRouter.this && within(other, range)) {
-        // 如果目标桥刚放下（0.5秒内），拒绝连接
+        if (!Core.input.config.isShown()) {
+            return false; // 未打开配置界面，拒绝自动连接
+        }
+        // 目标桥刚放下也拒绝
         if (other instanceof BridgeRouterBuild) {
             BridgeRouterBuild otherBuild = (BridgeRouterBuild) other;
             if (Time.time - otherBuild.creationTime < 30f) {
@@ -588,7 +586,7 @@ public boolean onConfigureBuildTapped(Building other) {
         configure(other.pos());
         return false;
     }
-    return true;
+    return false;
 }
 
         @Override
