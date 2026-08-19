@@ -590,15 +590,10 @@ public boolean onConfigureBuildTapped(Building other) {
     return false;
 }
 
-        @Override
-        public Object config() {
-            IntSeq out = new IntSeq(links.size * 2);
-            for (int pos : links) {
-                Point2 p = Point2.unpack(pos);
-                out.add(p.x - tileX(), p.y - tileY());
-            }
-            return out;
-        }
+@Override
+public Object config() {
+    return null;
+}
 
         @Override
         public void write(Writes write) {
