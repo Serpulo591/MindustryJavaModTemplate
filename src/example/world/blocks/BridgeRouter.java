@@ -168,17 +168,18 @@ public void setLink(Seq<Integer> v) {
 @Override
 public void onRemoved() {
     super.onRemoved();
+    // 先复制一份，避免遍历时修改列表导致崩溃
+    Seq<BridgeRouterBuild> copy = new Seq<>(activeBridges);
     int myPos = pos();
-    // 先把自己从 activeBridges 移除，避免遍历到自己
-    activeBridges.remove(this);
-    // 遍历所有剩下的桥，如果它们的 links 里有我，就删掉
-    for (BridgeRouterBuild other : activeBridges) {
+    for (BridgeRouterBuild other : copy) {
+        if (other == this) continue;
         Seq<Integer> otherLinks = other.getLink();
         if (otherLinks.contains(myPos)) {
             otherLinks.remove(myPos);
-            other.setLink(otherLinks);  // 触发复制保存
+            other.setLink(otherLinks);
         }
     }
+    activeBridges.remove(this);
 }
 
         @Override
