@@ -77,7 +77,7 @@ public class GlowBlocks {
             update = true;
             solid = true;
             itemCapacity = 10;
-            range = 8;
+            range = 64;
             consumePower(0.4f);
             requirements(Category.distribution, with(GlowItems.cobalt, 12, Items.tungsten, 8));
         }};
