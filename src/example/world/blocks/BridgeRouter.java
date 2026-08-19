@@ -21,12 +21,11 @@ import mindustry.input.*;
 import mindustry.ui.Bar;
 import mindustry.type.*;
 import mindustry.world.*;
-import mindustry.world.blocks.*;
 import mindustry.world.meta.*;
 
 import static mindustry.Vars.*;
 
-public class BridgeRouter extends Block {
+public class BridgeRouter extends StorageBlock {
     public final int timerCheckMoved = timers ++;
     public int range;
     public float transportTime;
@@ -59,5 +58,8 @@ public class BridgeRouter extends Block {
         delayLandingConfig = true;
         config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> tile.link = Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
         config(Integer.class, (BridgeRouterBuild tile, Integer i) -> tile.link = i);
+        public static class BridgeRouterBuild extends StorageBuild {
+            public int link;
+        }
     }
 }
