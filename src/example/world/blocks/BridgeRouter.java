@@ -8,6 +8,7 @@ import arc.struct.IntSeq;
 import arc.struct.Seq;
 import arc.util.*;
 import arc.util.io.*;
+import mindustry.core.*;
 import mindustry.core.Core;
 import mindustry.gen.*;
 import mindustry.graphics.*;
