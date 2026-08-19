@@ -1,210 +1,174 @@
 package mindustry.world.blocks.defense;
 
-import arc.*;
+import arc.Graphics.*;
+import arc.Graphics.Cursor.*;
 import arc.audio.*;
-import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.math.*;
 import arc.math.geom.*;
+import arc.struct.*;
 import arc.util.*;
+import arc.util.io.*;
+import mindustry.annotations.Annotations.*;
+import mindustry.content.*;
 import mindustry.entities.*;
+import mindustry.entities.units.*;
 import mindustry.gen.*;
-import mindustry.graphics.*;
-import mindustry.world.*;
-import mindustry.world.blocks.*;
-import mindustry.world.meta.*;
+import mindustry.logic.*;
 
 import static mindustry.Vars.*;
 
-public class BridgeRouter extends Block{
-    /** Lighting chance. -1 to disable */
-    public float lightningChance = -1f;
-    public float lightningDamage = 20f;
-    public int lightningLength = 17;
-    public Color lightningColor = Pal.surge;
-    public Sound lightningSound = Sounds.shootArc;
+public class BridgeRouter extends Wall{
+    protected final static Rect rect = new Rect();
+    protected final static Queue<BridgeRouterBuild> BridgeRouterQueue = new Queue<>();
 
-    /** Bullet deflection chance. -1 to disable */
-    public float chanceDeflect = -1f;
-    public boolean flashHit;
-    public Color flashColor = Color.white;
-    public Sound deflectSound = Sounds.none;
-    /** If true, this block uses autotiling; variants are not supported. See https://github.com/GglLfr/tile-gen*/
-    public boolean autotile = false;
-
-    protected TextureRegion[] autotileRegions;
+    public final int timerToggle = timers++;
+    public Effect openfx = Fx.BridgeRouteropen;
+    public Effect closefx = Fx.BridgeRouterclose;
+    public Sound BridgeRouterSound = Sounds.BridgeRouter;
+    public boolean chainEffect = false;
+    public @Load("@-open") TextureRegion openRegion;
 
     public BridgeRouter(String name){
         super(name);
-        solid = true;
-        destructible = true;
-        group = BlockGroup.BridgeRouters;
-        buildCostMultiplier = 6f;
-        canOverdrive = false;
-        drawDisabled = false;
-        crushDamageMultiplier = 5f;
-        priority = TargetPriority.BridgeRouter;
+        solid = false;
+        solidifes = true;
+        consumesTap = true;
 
-        //it's a BridgeRouter of course it's supported everywhere
-        envEnabled = Env.any;
+        config(Boolean.class, (BridgeRouterBuild base, Boolean open) -> {
+            if(!world.isGenerating()){
+                BridgeRouterSound.at(base);
+                base.effect();
+            }
+
+            BridgeRouterQueue.clear();
+            BridgeRouterQueue.add(base);
+
+            for(BridgeRouterBuild entity : base.chained.isEmpty() ? BridgeRouterQueue : base.chained){
+                //skip BridgeRouters with things in them
+                if((Units.anyEntities(entity.tile) && !open) || entity.open == open){
+                    continue;
+                }
+
+                if(chainEffect) entity.effect();
+                entity.open = open;
+                entity.recache();
+                if(!world.isGenerating()) pathfinder.updateTile(entity.tile);
+            }
+        });
     }
 
     @Override
-    public void setStats(){
-        super.setStats();
-
-        if(chanceDeflect > 0f) stats.add(Stat.baseDeflectChance, chanceDeflect, StatUnit.none);
-        if(lightningChance > 0f){
-            stats.add(Stat.lightningChance, lightningChance * 100f, StatUnit.percent);
-            stats.add(Stat.lightningDamage, lightningDamage, StatUnit.none);
-        }
-    }
-
-    @Override
-    public void load(){
-        super.load();
-
-        if(autotile){
-            autotileRegions = TileBitmask.load(name);
-        }
-    }
-
-    @Override
-    public void init(){
-        if(size == 2 && destroySound == Sounds.unset) destroySound = Sounds.blockExplodeBridgeRouter;
-        if(!flashHit){
-            drawDynamic = false;
-        }
-        drawCached = true;
-        super.init();
-    }
-
-    @Override
-    public TextureRegion[] icons(){
-        return new TextureRegion[]{Core.atlas.find(Core.atlas.has(name) ? name : name + "1")};
+    public TextureRegion getPlanRegion(BuildPlan plan, Eachable<BuildPlan> list){
+        return plan.config == Boolean.TRUE ? openRegion : region;
     }
 
     public class BridgeRouterBuild extends Building{
-        protected int autotileBits;
-        protected float hit;
-
-        protected void updateAutotileBits(){
-            int prev = autotileBits;
-            autotileBits = 0;
-            for(int i = 0; i < 8; i++){
-                int dx = Geometry.d8[i].x, dy = Geometry.d8[i].y;
-                Tile other = tile.nearby(dx * size, dy * size);
-                if(other != null && other.build != null && other.build.block == block && other.build.team == team){
-                    autotileBits |= (1 << i);
-                }
-            }
-            if(prev != autotileBits) recache();
-        }
-
-        protected void updateOtherBits(){
-            for(int i = 0; i < 8; i++){
-                int dx = Geometry.d8[i].x, dy = Geometry.d8[i].y;
-                Tile other = tile.nearby(dx * size, dy * size);
-                if(other != null && other.build != null && other.isCenter() && other.build.block == block && other.build.team == team && other.build instanceof BridgeRouterBuild w){
-                    w.updateAutotileBits();
-                }
-            }
-        }
+        public boolean open = false;
+        public Seq<BridgeRouterBuild> chained = new Seq<>();
 
         @Override
-        public void onProximityUpdate(){
-            super.onProximityUpdate();
-
-            if(autotile) updateAutotileBits();
+        public void onProximityAdded(){
+            super.onProximityAdded();
+            updateChained();
         }
 
         @Override
         public void onProximityRemoved(){
             super.onProximityRemoved();
 
-            if(autotile) updateOtherBits();
+            for(Building b : proximity){
+                if(b instanceof BridgeRouterBuild d){
+                    d.updateChained();
+                }
+            }
         }
 
         @Override
-        public void onProximityAdded(){
-            super.onProximityAdded();
-
-            if(autotile && !world.isGenerating()) updateOtherBits();
+        public double sense(LAccess sensor){
+            if(sensor == LAccess.enabled) return open ? 1 : 0;
+            return super.sense(sensor);
         }
 
         @Override
-        public void drawCached(){
-            if(autotile){
-                TextureRegion region = autotileRegions[TileBitmask.values[autotileBits]];
-                Draw.rect(region, x, y);
-            }else{
-                super.draw();
+        public void control(LAccess type, double p1, double p2, double p3, double p4){
+            if(type == LAccess.enabled){
+                boolean shouldOpen = !Mathf.zero(p1);
+
+                if(net.client() || open == shouldOpen || (Units.anyEntities(tile) && !shouldOpen) || !origin().timer(timerToggle, 80f)){
+                    return;
+                }
+
+                configureAny(shouldOpen);
+            }
+        }
+
+        public BridgeRouterBuild origin(){
+            return chained.isEmpty() ? this : chained.first();
+        }
+
+        public void effect(){
+            (open ? closefx : openfx).at(this, size);
+        }
+
+        public void updateChained(){
+            chained = new Seq<>();
+            BridgeRouterQueue.clear();
+            BridgeRouterQueue.add(this);
+
+            while(!BridgeRouterQueue.isEmpty()){
+                var next = BridgeRouterQueue.removeLast();
+                chained.add(next);
+
+                for(var b : next.proximity){
+                    if(b instanceof BridgeRouterBuild d && d.chained != chained){
+                        d.chained = chained;
+                        BridgeRouterQueue.addFirst(d);
+                    }
+                }
             }
         }
 
         @Override
         public void draw(){
-
-            //draw flashing white overlay if enabled
-            if(flashHit && hit >= 0.001f){
-                Draw.color(flashColor);
-                Draw.alpha(hit * 0.5f);
-                Draw.blend(Blending.additive);
-                Fill.rect(x, y, tilesize * size, tilesize * size);
-                Draw.blend();
-                Draw.reset();
-
-                if(!state.isPaused()){
-                    hit = Mathf.clamp(hit - Time.delta / 10f);
-                }
-            }
+            Draw.rect(open ? openRegion : region, x, y);
         }
 
         @Override
-        public boolean collision(Bullet bullet){
-            super.collision(bullet);
+        public Cursor getCursor(){
+            return interactable(player.team()) ? SystemCursor.hand : SystemCursor.arrow;
+        }
 
-            hit = 1f;
+        @Override
+        public boolean checkSolid(){
+            return !open;
+        }
 
-            //create lightning if necessary
-            if(lightningChance > 0f){
-                if(Mathf.chance(lightningChance)){
-                    Lightning.create(team, lightningColor, lightningDamage, x, y, bullet.rotation() + 180f, lightningLength);
-                    lightningSound.at(tile, Mathf.random(0.9f, 1.1f));
-                }
+        @Override
+        public void tapped(){
+            if((Units.anyEntities(tile) && open) || !origin().timer(timerToggle, 60f)){
+                return;
             }
 
-            //deflect bullets if necessary
-            if(chanceDeflect > 0f){
-                //slow bullets are not deflected
-                if(bullet.vel.len() <= 0.1f || !bullet.type.reflectable) return true;
+            configure(!open);
+        }
 
-                //bullet reflection chance depends on bullet damage
-                if(!Mathf.chance(chanceDeflect / bullet.damage())) return true;
+        @Override
+        public Boolean config(){
+            return open;
+        }
 
-                //make sound
-                deflectSound.at(tile, Mathf.random(0.9f, 1.1f));
+        @Override
+        public void write(Writes write){
+            super.write(write);
+            write.bool(open);
+        }
 
-                //translate bullet back to where it was upon collision
-                bullet.trns(-bullet.vel.x, -bullet.vel.y);
-
-                float penX = Math.abs(x - bullet.x), penY = Math.abs(y - bullet.y);
-
-                if(penX > penY){
-                    bullet.vel.x *= -1;
-                }else{
-                    bullet.vel.y *= -1;
-                }
-
-                bullet.owner = this;
-                bullet.team = team;
-                bullet.time += 1f;
-
-                //disable bullet collision by returning false
-                return false;
-            }
-
-            return true;
+        @Override
+        public void read(Reads read, byte revision){
+            super.read(read, revision);
+            open = read.bool();
         }
     }
+
 }
