@@ -153,6 +153,7 @@ public class BridgeRouter extends StorageBlock {
                     Tile other = tile.nearby(dx, dy);
                     if(other == null) continue;
                     if(linkValid(tile, other)){
+                        if(incoming.contains(other.pos()) && other.pos() != link) continue;
                         boolean linked = other.pos() == link;
                         Drawf.select(other.drawx(), other.drawy(),
                             other.block().size * tilesize / 2f + 2f + (linked ? 0f : Mathf.absin(Time.time, 4f, 1f)),
