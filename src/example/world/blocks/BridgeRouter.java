@@ -27,7 +27,7 @@ import static mindustry.Vars.*;
 
 public class BridgeRouter extends StorageBlock {
     public final int timerCheckMoved = timers ++;
-    public int range = 4;
+    public int range;
     public float transportTime = 1f;
     public boolean fadeIn = true;
     public boolean moveArrows = true;
