@@ -135,6 +135,7 @@ public void setBars() {
         private int sendIndex = 0;
         private Seq<TransportItem> transport = new Seq<>();
         private float powerLoss = 0f;
+        private float creationTime;
 
         private static class TransportItem {
             Item item;
@@ -166,6 +167,7 @@ public void setBars() {
         @Override
         public void created() {
             super.created();
+            creationTime = Time.time;
             activeBridges.add(this);
         }
 
@@ -549,18 +551,31 @@ public void setBars() {
             );
         }
 
-        @Override
-        public boolean onConfigureBuildTapped(Building other) {
-            if (other == this) {
-                setLink(new Seq<>());
+@Override
+public boolean onConfigureBuildTapped(Building other) {
+    // 如果这个桥本身刚放下（0.5秒内），直接忽略所有操作
+    if (Time.time - this.creationTime < 30f) {
+        return false;
+    }
+
+    if (other == this) {
+        setLink(new Seq<>());
+        return false;
+    }
+
+    if (other != null && other.team == team && other.block == BridgeRouter.this && within(other, range)) {
+        // 如果目标桥刚放下（0.5秒内），拒绝连接
+        if (other instanceof BridgeRouterBuild) {
+            BridgeRouterBuild otherBuild = (BridgeRouterBuild) other;
+            if (Time.time - otherBuild.creationTime < 30f) {
                 return false;
             }
-            if (other != null && other.team == team && other.block == BridgeRouter.this && within(other, range)) {
-                configure(other.pos());
-                return false;
-            }
-            return true;
         }
+        configure(other.pos());
+        return false;
+    }
+    return true;
+}
 
         @Override
         public Object config() {
