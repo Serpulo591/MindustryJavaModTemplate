@@ -53,7 +53,7 @@ public class BridgeRouter extends StorageBlock {
         saveConfig = true;
         itemCapacity = 30;
         group = BlockGroup.transportation;
-        priority = TargetPriority.transport;
+        // priority 不需要显式设置，默认即可
         envEnabled = Env.any;
         allowConfigInventory = false;
     }
@@ -71,7 +71,7 @@ public class BridgeRouter extends StorageBlock {
         super.setBars();
         addBar("connections", (BridgeRouterBuild e) ->
             new Bar(
-                () -> "Connections: " + e.links.size + "/" + linkLimit, // 硬编码，避免本地化依赖
+                () -> "Connections: " + e.links.size + "/" + linkLimit,
                 () -> Pal.accent,
                 () -> (float) e.links.size / linkLimit
             )
@@ -226,7 +226,7 @@ public class BridgeRouter extends StorageBlock {
             return super.acceptItem(source, item);
         }
 
-        // 绘制连接线（在draw中调用）
+        // 绘制所有连接线
         private void drawLinks() {
             if (links.isEmpty()) return;
             for (int pos : links) {
@@ -299,11 +299,10 @@ public class BridgeRouter extends StorageBlock {
 
         @Override
         public void draw() {
-            super.draw(); // 绘制方块本身
-            // 在方块上层绘制连接线
+            super.draw();
             Draw.z(Layer.block + 1);
             drawLinks();
-            Draw.z(Layer.block); // 恢复
+            Draw.z(Layer.block);
         }
 
         @Override
@@ -320,10 +319,11 @@ public class BridgeRouter extends StorageBlock {
                 }
             }
 
-            // 显示范围内其他桥（已连接或可连接）
-            for (Building other : world.builds) {
-                if (other == this || other.team != team || !within(other, range)) continue;
-                if (other.block == BridgeRouter.this) {
+            // 遍历所有地图上的建筑，找出同类桥
+            for (Tile tile : world.tiles) {
+                Building other = tile.build;
+                if (other == null || other == this || other.team != team) continue;
+                if (other.block == BridgeRouter.this && within(other, range)) {
                     boolean connected = links.contains(other.pos()) || other.<BridgeRouterBuild>as().links.contains(pos());
                     Color color = connected ? Pal.place : Pal.breakInvalid;
                     float extra = connected ? 0f : pulse;
@@ -340,8 +340,10 @@ public class BridgeRouter extends StorageBlock {
                     }
                 }
             }
-            for (Building other : world.builds) {
-                if (other == this || other.team != team) continue;
+            // 绘制其他桥指向自己的连接线（提示）
+            for (Tile tile : world.tiles) {
+                Building other = tile.build;
+                if (other == null || other == this || other.team != team) continue;
                 if (other.block == BridgeRouter.this && other.<BridgeRouterBuild>as().links.contains(pos())) {
                     if (!links.contains(other.pos())) {
                         drawConnectionLine(other, this, Pal.accent, 1f);
