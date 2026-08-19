@@ -108,7 +108,7 @@ public void setBars() {
     super.setBars();
     addBar("connections", (BridgeRouterBuild e) ->
         new Bar(
-            () -> bundle.format("bar.powerlines", e.getLink().size, linkLimit),
+            () -> Vars.bundle.format("bar.powerlines", e.getLink().size, linkLimit),
             () -> Pal.accent,
             () -> (float) e.getLink().size / linkLimit
         )
