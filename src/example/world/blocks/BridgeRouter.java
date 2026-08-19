@@ -571,12 +571,8 @@ public boolean onConfigureBuildTapped(Building other) {
         return false;
     }
 
-    // 关键：只有当前处于配置模式（玩家主动点击了某个方块）才允许建立链接
     if (other != null && other.team == team && other.block == BridgeRouter.this && within(other, range)) {
-        if (!Core.input.config.isShown()) {
-            return false; // 未打开配置界面，拒绝自动连接
-        }
-        // 目标桥刚放下也拒绝
+        // 目标桥刚放下拒绝
         if (other instanceof BridgeRouterBuild) {
             BridgeRouterBuild otherBuild = (BridgeRouterBuild) other;
             if (Time.time - otherBuild.creationTime < 30f) {
@@ -586,7 +582,7 @@ public boolean onConfigureBuildTapped(Building other) {
         configure(other.pos());
         return false;
     }
-    return false;
+    return true;
 }
 
         @Override
