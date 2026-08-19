@@ -23,9 +23,9 @@ public class BridgeRouter extends Wall{
     protected final static Queue<BridgeRouterBuild> BridgeRouterQueue = new Queue<>();
 
     public final int timerToggle = timers++;
-    public Effect openfx = Fx.BridgeRouteropen;
-    public Effect closefx = Fx.BridgeRouterclose;
-    public Sound BridgeRouterSound = Sounds.BridgeRouter;
+    public Effect openfx = Fx.Dooropen;
+    public Effect closefx = Fx.Doorclose;
+    public Sound BridgeRouterSound = Sounds.Door;
     public boolean chainEffect = false;
     public @Load("@-open") TextureRegion openRegion;
 
