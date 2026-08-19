@@ -110,15 +110,6 @@ public class BridgeRouter extends StorageBlock {
             link = -1;
         }
     
-        @Override
-        public void drawSelect() {
-            if (linkValid(tile, world.tile(link))) {
-                drawInput(world.tile(link));
-            }
-            incoming.each(pos -> drawInput(world.tile(pos)));
-            Draw.reset();
-        }
-    
         private void drawInput(Tile other) {
             if (!linkValid(tile, other, false)) return;
             boolean linked = other.pos() == link;
