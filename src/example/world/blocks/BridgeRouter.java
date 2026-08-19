@@ -8,6 +8,7 @@ import arc.struct.IntSeq;
 import arc.struct.Seq;
 import arc.util.*;
 import arc.util.io.*;
+import mindustry.core.Core;
 import mindustry.entities.*;
 import mindustry.game.*;
 import mindustry.gen.*;
@@ -73,7 +74,7 @@ public class BridgeRouter extends StorageBlock {
         super.setBars();
         addBar("connections", (BridgeRouterBuild e) ->
             new Bar(
-                () -> core.bundle.format("bar.powerlines", e.links.size, linkLimit),
+                () -> Core.bundle.format("bar.powerlines", e.links.size, linkLimit),
                 () -> Pal.accent,
                 () -> (float) e.links.size / linkLimit
             )
