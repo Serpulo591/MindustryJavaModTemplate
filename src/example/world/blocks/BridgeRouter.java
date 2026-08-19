@@ -164,12 +164,26 @@ public void setBars() {
             this.efficiency = Mathf.lerpDelta(this.efficiency, shouldConsume() ? 1f : 0f, warmupSpeed);
         }
 
-        @Override
-        public void created() {
-            super.created();
-            creationTime = Time.time;
-            activeBridges.add(this);
+@Override
+public void created() {
+    super.created();
+    int myPos = pos();
+    // 先加入列表，以便后续遍历
+    activeBridges.add(this);
+    
+    // 延迟 1 帧执行，确保所有因放置触发的自动添加已完成
+    Time.runTask(1f, () -> {
+        // 1. 清空自己的链接（如果有被自动添加的）
+        setLink(new Seq<>());
+        // 2. 清除所有其他方块链接中指向自己的
+        for (BridgeRouterBuild b : activeBridges) {
+            if (b != this && b.getLink().contains(myPos)) {
+                b.getLink().remove(myPos);
+                b.setLink(b.getLink()); // 触发更新
+            }
         }
+    });
+}
 
         @Override
         public void onRemoved() {
