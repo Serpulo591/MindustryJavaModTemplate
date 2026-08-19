@@ -66,6 +66,19 @@ public class BridgeRouter extends StorageBlock {
             }
             tile.setLink(links);
         });
+
+config(Integer.class, (BridgeRouterBuild tile, Integer value) -> {
+    int pos = value;
+    Seq<Integer> links = new Seq<>(tile.getLink());
+    Integer intObj = pos;
+    if (links.contains(intObj)) {
+        links.remove(intObj);
+    } else {
+        if (links.size >= linkLimit) return;
+        links.add(intObj);
+    }
+    tile.setLink(links);
+});
     }
 
     @Override
