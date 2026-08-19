@@ -165,11 +165,21 @@ public void setLink(Seq<Integer> v) {
             activeBridges.add(this);
         }
 
-        @Override
-        public void onRemoved() {
-            super.onRemoved();
-            activeBridges.remove(this);
+@Override
+public void onRemoved() {
+    super.onRemoved();
+    int myPos = pos();
+    // 先把自己从 activeBridges 移除，避免遍历到自己
+    activeBridges.remove(this);
+    // 遍历所有剩下的桥，如果它们的 links 里有我，就删掉
+    for (BridgeRouterBuild other : activeBridges) {
+        Seq<Integer> otherLinks = other.getLink();
+        if (otherLinks.contains(myPos)) {
+            otherLinks.remove(myPos);
+            other.setLink(otherLinks);  // 触发复制保存
         }
+    }
+}
 
         @Override
         public boolean acceptItem(Building source, Item item) {
