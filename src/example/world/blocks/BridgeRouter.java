@@ -8,6 +8,7 @@ import mindustry.world.meta.*;
 public class BridgeRouter extends Block {
     // 唯一保留的方块属性 —— 连接范围（仅用于占位显示，实际无任何逻辑）
     public int range = 4;
+    public TextureRegion endRegion, bridgeRegion, arrowRegion;
 
     public BridgeRouter(String name) {
         super(name);
