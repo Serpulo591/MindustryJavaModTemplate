@@ -26,10 +26,9 @@ import mindustry.world.meta.*;
 import static mindustry.Vars.*;
 
 public class BridgeRouter extends StorageBlock {
-    public static final Seq<BridgeRouterBuild> allBridges = new Seq<>();
     public final int timerCheckMoved = timers ++;
     public int range;
-    public float transportTime;
+    public float transportTime = 1f;
     public boolean fadeIn = true;
     public boolean moveArrows = true;
     public boolean pulse = false;
@@ -151,34 +150,25 @@ public class BridgeRouter extends StorageBlock {
             Draw.mixcol();
         }
         
-@Override
-public void drawConfigure() {
-    Drawf.select(x, y, tile.block().size * tilesize / 2f + 2f, Pal.accent);
-    
-    for (BridgeRouterBuild other : allBridges) {
-        if (other == this) continue;
-        if (other.team != team) continue;
-        if (!within(other, range)) continue;
-        if (!linkValid(tile, other.tile)) continue;
-        
-        boolean linked = other.pos() == link;
-        Drawf.select(other.x, other.y,
-            other.block.size * tilesize / 2f + 2f + (linked ? 0f : Mathf.absin(Time.time, 4f, 1f)),
-            linked ? Pal.place : Pal.breakInvalid);
-    }
-}
-
-@Override
-public void created() {
-    super.created();
-    allBridges.add(this);
-}
-
-@Override
-public void onRemoved() {
-    super.onRemoved();
-    allBridges.remove(this);
-}
+        @Override
+        public void drawConfigure(){
+            Drawf.select(x, y, tile.block().size * tilesize / 2f + 2f, Pal.accent);
+            int r = range;
+            for(int dx = -r; dx <= r; dx++){
+                for(int dy = -r; dy <= r; dy++){
+                    if(dx == 0 && dy == 0) continue;
+                    if(dx*dx + dy*dy > r*r) continue;
+                    Tile other = tile.nearby(dx, dy);
+                    if(other == null) continue;
+                    if(linkValid(tile, other)){
+                        boolean linked = other.pos() == link;
+                        Drawf.select(other.drawx(), other.drawy(),
+                            other.block().size * tilesize / 2f + 2f + (linked ? 0f : Mathf.absin(Time.time, 4f, 1f)),
+                            linked ? Pal.place : Pal.breakInvalid);
+                    }
+                }
+            }
+        }
         
         @Override
         public boolean onConfigureBuildTapped(Building other){
