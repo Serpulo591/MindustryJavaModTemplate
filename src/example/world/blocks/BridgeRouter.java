@@ -236,7 +236,7 @@ public void onRemoved() {
                 int i = links.size;
                 while (i-- > 0) {
                     Building target = world.build(links.get(i));
-                    if (target == null || target.team != team || target.block != BridgeRouter.this || !within(target, range)) {
+                    if (target == null || target.team != team || target.block != this.block || !within(target, range)) {
                         links.remove(i);
                     }
                 }
@@ -294,7 +294,7 @@ public void onRemoved() {
             // 1. 绘制自己的链接
             for (int pos : links) {
                 Building target = world.build(pos);
-                if (target == null || target.team != team || target.block != BridgeRouter.this) continue;
+                if (target == null || target.team != team || target.block != this.block) continue;
                 drawLinkLine(this, target);
             }
         }
