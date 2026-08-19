@@ -71,7 +71,7 @@ public class BridgeRouter extends StorageBlock {
     @Override
     public void drawPlace(int x, int y, int rotation, boolean valid){
         super.drawPlace(x, y, rotation, valid);
-        Drawf.dashCircle(x * tilesize, y * tilesize, range - tilesize, Pal.accent);
+        Drawf.dashCircle(x * tilesize + tilesize/2f, y * tilesize + tilesize/2f, range * tilesize, Pal.accent);
     }
     
     public boolean linkValid(Tile tile, Tile other){
