@@ -53,7 +53,7 @@ public class BridgeRouter extends StorageBlock {
         ignoreResizeConfig = true;
         priority = TargetPriority.transport;
         delayLandingConfig = true;
-        config(Point2.class, (ItemBridgeBuild tile, Point2 i) -> tile.link = Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
-        config(Integer.class, (ItemBridgeBuild tile, Integer i) -> tile.link = i);
+        config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> tile.link = Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
+        config(Integer.class, (BridgeRouterBuild tile, Integer i) -> tile.link = i);
     }
 }
