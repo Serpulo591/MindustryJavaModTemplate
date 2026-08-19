@@ -553,9 +553,12 @@ public void created() {
 
 @Override
 public boolean onConfigureBuildTapped(Building other) {
-    // 如果这个桥自身刚放下（0.5秒内），忽略一切操作
-    if (Time.time - this.creationTime < 30f) {
-        return false;
+    // 获取当前被选中的建筑（玩家点击进入配置模式的建筑）
+    Building selected = control.input.config.getSelected();
+
+    // 如果点击的不是自身，且没有选中任何建筑，或者选中的不是自身，则忽略点击
+    if (other != this && (selected == null || selected != this)) {
+        return false; // 不是自身点击，且未进入配置模式，拒绝
     }
 
     if (other == this) {
@@ -571,18 +574,14 @@ public boolean onConfigureBuildTapped(Building other) {
         return false;
     }
 
+    // 点击其他桥：只有当前选中的是自身，才允许连接
     if (other != null && other.team == team && other.block == BridgeRouter.this && within(other, range)) {
-        // 目标桥刚放下拒绝
-        if (other instanceof BridgeRouterBuild) {
-            BridgeRouterBuild otherBuild = (BridgeRouterBuild) other;
-            if (Time.time - otherBuild.creationTime < 30f) {
-                return false;
-            }
+        if (selected == this) {
+            configure(other.pos());
         }
-        configure(other.pos());
         return false;
     }
-    return true;
+    return false;
 }
 
         @Override
