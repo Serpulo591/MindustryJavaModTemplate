@@ -8,7 +8,6 @@ import arc.struct.IntSeq;
 import arc.struct.Seq;
 import arc.util.*;
 import arc.util.io.*;
-import mindustry.core.Core;
 import mindustry.entities.*;
 import mindustry.game.*;
 import mindustry.gen.*;
@@ -22,7 +21,7 @@ import mindustry.world.meta.*;
 import static mindustry.Vars.*;
 
 public class BridgeRouter extends StorageBlock {
-    // 配置常量（全部 static final）
+    // 常量（全部 static final）
     public static final int range = 64;
     public static final int linkLimit = 4;
     public static final float warmupSpeed = 0.05f;
@@ -74,7 +73,7 @@ public class BridgeRouter extends StorageBlock {
         super.setBars();
         addBar("connections", (BridgeRouterBuild e) ->
             new Bar(
-                () -> Core.bundle.format("bar.powerlines", e.links.size, linkLimit),
+                () -> core.bundle.format("bar.powerlines", e.links.size, linkLimit),
                 () -> Pal.accent,
                 () -> (float) e.links.size / linkLimit
             )
