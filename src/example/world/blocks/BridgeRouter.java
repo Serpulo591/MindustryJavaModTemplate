@@ -9,7 +9,6 @@ import arc.struct.Seq;
 import arc.util.*;
 import arc.util.io.*;
 import mindustry.core.*;
-import mindustry.core.Core;
 import mindustry.gen.*;
 import mindustry.graphics.*;
 import mindustry.type.*;
@@ -104,17 +103,17 @@ public class BridgeRouter extends StorageBlock {
         stats.add(Stat.itemCapacity, itemCapacity, StatUnit.items);
     }
 
-    @Override
-    public void setBars() {
-        super.setBars();
-        addBar("connections", (BridgeRouterBuild e) ->
-            new Bar(
-                () -> Core.bundle.format("bar.powerlines", e.getLink().size, linkLimit),
-                () -> Pal.accent,
-                () -> (float) e.getLink().size / linkLimit
-            )
-        );
-    }
+@Override
+public void setBars() {
+    super.setBars();
+    addBar("connections", (BridgeRouterBuild e) ->
+        new Bar(
+            () -> bundle.format("bar.powerlines", e.getLink().size, linkLimit),
+            () -> Pal.accent,
+            () -> (float) e.getLink().size / linkLimit
+        )
+    );
+}
 
     @Override
     public void drawPlace(int x, int y, int rotation, boolean valid) {
