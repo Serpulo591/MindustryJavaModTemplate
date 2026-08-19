@@ -297,6 +297,7 @@ public void onRemoved() {
                 if (target == null || target.team != team || target.block != BridgeRouter.this) continue;
                 drawLinkLine(this, target);
             }
+        }
 
         // 绘制单条连接线（含箭头）
         private void drawLinkLine(Building from, Building to) {
