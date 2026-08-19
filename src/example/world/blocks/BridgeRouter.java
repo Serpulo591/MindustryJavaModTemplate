@@ -88,7 +88,7 @@ public class BridgeRouter extends StorageBlock {
     public boolean positionsValid(int x1, int y1, int x2, int y2){
         int dx = x1 - x2;
         int dy = y1 - y2;
-        return (dx * dx + dy * dy) <= (range * range / 8 + 8);
+        return (dx * dx + dy * dy) <= (range / 8 + 1);
     }
     
     @Override
@@ -148,12 +148,12 @@ public class BridgeRouter extends StorageBlock {
             Draw.color();
             Draw.rect("bridge-arrow", x, y, rel * 90);
             Draw.mixcol();
-            Drawf.dashCircle(x * tilesize, y * tilesize, range - tilesize, Pal.accent);
         }
         
         @Override
         public void drawConfigure(){
             Drawf.select(x, y, tile.block().size * tilesize / 2f + 2f, Pal.accent);
+            Drawf.dashCircle(x * tilesize, y * tilesize, range - tilesize, Pal.accent);
             int r = range;
             for(int dx = -r; dx <= r; dx++){
                 for(int dy = -r; dy <= r; dy++){
