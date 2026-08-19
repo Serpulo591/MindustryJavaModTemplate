@@ -8,9 +8,6 @@ import arc.struct.IntSeq;
 import arc.struct.Seq;
 import arc.util.*;
 import arc.util.io.*;
-import mindustry.Vars;
-import mindustry.entities.*;
-import mindustry.game.*;
 import mindustry.gen.*;
 import mindustry.graphics.*;
 import mindustry.type.*;
@@ -74,7 +71,7 @@ public class BridgeRouter extends StorageBlock {
         super.setBars();
         addBar("connections", (BridgeRouterBuild e) ->
             new Bar(
-                () -> Vars.core.bundle.format("bar.powerlines", e.links.size, linkLimit),
+                () -> "Connections: " + e.links.size + "/" + linkLimit, // 硬编码，避免本地化依赖
                 () -> Pal.accent,
                 () -> (float) e.links.size / linkLimit
             )
@@ -137,18 +134,6 @@ public class BridgeRouter extends StorageBlock {
             float time;
         }
         private final Seq<TransportItem> transportQueue = new Seq<>();
-
-        @Override
-        public void created() {
-            super.created();
-            activeBridges.add(this);
-        }
-
-        @Override
-        public void onRemoved() {
-            super.onRemoved();
-            activeBridges.remove(this);
-        }
 
         public void setLinks(Seq<Integer> newLinks) {
             this.links = newLinks;
@@ -241,6 +226,86 @@ public class BridgeRouter extends StorageBlock {
             return super.acceptItem(source, item);
         }
 
+        // 绘制连接线（在draw中调用）
+        private void drawLinks() {
+            if (links.isEmpty()) return;
+            for (int pos : links) {
+                Building target = world.build(pos);
+                if (target == null || target.team != team || target.block != BridgeRouter.this) continue;
+
+                float loss = getPowerLoss();
+                Color outer = LINE_COLOR_OUTER.lerp(POWER_LOSS_COLOR, loss);
+                Color inner = LINE_COLOR_INNER.lerp(POWER_LOSS_INNER_COLOR, efficiency <= 0 ? 1 : 0);
+
+                float dx = target.x - x, dy = target.y - y;
+                float len = Mathf.dst(dx, dy);
+                if (len == 0) continue;
+                float ux = dx / len, uy = dy / len;
+                float nx = -uy, ny = ux;
+                float halfWidth = LINE_WIDTH_INNER / 2f;
+
+                float inset = LINE_INSET;
+                float sx = x + ux * inset;
+                float sy = y + uy * inset;
+                float ex = target.x - ux * inset;
+                float ey = target.y - uy * inset;
+
+                float ext = OUTER_EXTEND;
+                float osx = sx - ux * ext, osy = sy - uy * ext;
+                float oex = ex + ux * ext, oey = ey + uy * ext;
+
+                Draw.color(outer);
+                Lines.stroke(LINE_WIDTH_OUTER);
+                Lines.line(osx + nx * halfWidth, osy + ny * halfWidth, oex + nx * halfWidth, oey + ny * halfWidth);
+                Lines.line(osx - nx * halfWidth, osy - ny * halfWidth, oex - nx * halfWidth, oey - ny * halfWidth);
+
+                Draw.color(inner);
+                Lines.stroke(LINE_WIDTH_INNER);
+                Lines.line(sx, sy, ex, ey);
+
+                Draw.color(outer);
+                Lines.stroke(CAP_LINE_WIDTH);
+                Lines.line(osx + nx * halfWidth, osy + ny * halfWidth, osx - nx * halfWidth, osy - ny * halfWidth);
+                Lines.line(oex + nx * halfWidth, oey + ny * halfWidth, oex - nx * halfWidth, oey - ny * halfWidth);
+
+                float startX = x + ux * inset;
+                float startY = y + uy * inset;
+                float endX = target.x - ux * inset;
+                float endY = target.y - uy * inset;
+                float bridgeLen = Mathf.dst(endX - startX, endY - startY);
+                int arrows = (int) (bridgeLen / arrowSpacing);
+                if (arrows > 0) {
+                    float angle = Mathf.angle(dx, dy);
+                    float rad = angle * Mathf.degRad;
+                    boolean powered = efficiency > 0;
+                    for (int a = 0; a < arrows; a++) {
+                        float px = startX + ux * a * arrowSpacing;
+                        float py = startY + uy * a * arrowSpacing;
+                        float timeScl = powered ? arrowTimeScl : 4.2f;
+                        float alpha = Mathf.absin(a - Time.time / timeScl, arrowPeriod, 1f);
+                        if (alpha <= 0.01f) continue;
+                        float finalAlpha = powered ? alpha : 0.5f;
+                        Color color = ARROW_COLOR.lerp(POWER_LOSS_COLOR, loss);
+                        Draw.color(color, finalAlpha);
+                        Fill.tri(
+                            px + Mathf.cos(rad) * arrowSize, py + Mathf.sin(rad) * arrowSize,
+                            px + Mathf.cos(rad + Mathf.PI * 0.5f) * arrowSize, py + Mathf.sin(rad + Mathf.PI * 0.5f) * arrowSize,
+                            px + Mathf.cos(rad - Mathf.PI * 0.5f) * arrowSize, py + Mathf.sin(rad - Mathf.PI * 0.5f) * arrowSize
+                        );
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void draw() {
+            super.draw(); // 绘制方块本身
+            // 在方块上层绘制连接线
+            Draw.z(Layer.block + 1);
+            drawLinks();
+            Draw.z(Layer.block); // 恢复
+        }
+
         @Override
         public void drawConfigure() {
             Drawf.dashCircle(x, y, range - tilesize, Pal.accent);
@@ -255,7 +320,8 @@ public class BridgeRouter extends StorageBlock {
                 }
             }
 
-            for (Building other : activeBridges) {
+            // 显示范围内其他桥（已连接或可连接）
+            for (Building other : world.builds) {
                 if (other == this || other.team != team || !within(other, range)) continue;
                 if (other.block == BridgeRouter.this) {
                     boolean connected = links.contains(other.pos()) || other.<BridgeRouterBuild>as().links.contains(pos());
@@ -274,7 +340,7 @@ public class BridgeRouter extends StorageBlock {
                     }
                 }
             }
-            for (Building other : activeBridges) {
+            for (Building other : world.builds) {
                 if (other == this || other.team != team) continue;
                 if (other.block == BridgeRouter.this && other.<BridgeRouterBuild>as().links.contains(pos())) {
                     if (!links.contains(other.pos())) {
@@ -385,91 +451,5 @@ public class BridgeRouter extends StorageBlock {
         public float getPowerLoss() {
             return powerLoss;
         }
-    }
-
-    private static final Seq<BridgeRouterBuild> activeBridges = new Seq<>();
-
-    static {
-        Events.run(EventType.Trigger.draw, () -> {
-            if (activeBridges.isEmpty()) return;
-            float prevZ = Draw.z();
-            Draw.z(Layer.block + 1);
-
-            for (BridgeRouterBuild bridge : activeBridges) {
-                if (!bridge.isValid() || world.build(bridge.pos()) != bridge) {
-                    activeBridges.remove(bridge);
-                    continue;
-                }
-                if (bridge.links.isEmpty()) continue;
-
-                for (int pos : bridge.links) {
-                    Building target = world.build(pos);
-                    if (target == null || target.team != bridge.team || target.block != bridge.block) continue;
-
-                    float loss = bridge.getPowerLoss();
-                    Color outer = LINE_COLOR_OUTER.lerp(POWER_LOSS_COLOR, loss);
-                    Color inner = LINE_COLOR_INNER.lerp(POWER_LOSS_INNER_COLOR, bridge.efficiency <= 0 ? 1 : 0);
-
-                    float dx = target.x - bridge.x, dy = target.y - bridge.y;
-                    float len = Mathf.dst(dx, dy);
-                    if (len == 0) continue;
-                    float ux = dx / len, uy = dy / len;
-                    float nx = -uy, ny = ux;
-                    float halfWidth = LINE_WIDTH_INNER / 2f;
-
-                    float inset = LINE_INSET;
-                    float sx = bridge.x + ux * inset;
-                    float sy = bridge.y + uy * inset;
-                    float ex = target.x - ux * inset;
-                    float ey = target.y - uy * inset;
-
-                    float ext = OUTER_EXTEND;
-                    float osx = sx - ux * ext, osy = sy - uy * ext;
-                    float oex = ex + ux * ext, oey = ey + uy * ext;
-
-                    Draw.color(outer);
-                    Lines.stroke(LINE_WIDTH_OUTER);
-                    Lines.line(osx + nx * halfWidth, osy + ny * halfWidth, oex + nx * halfWidth, oey + ny * halfWidth);
-                    Lines.line(osx - nx * halfWidth, osy - ny * halfWidth, oex - nx * halfWidth, oey - ny * halfWidth);
-
-                    Draw.color(inner);
-                    Lines.stroke(LINE_WIDTH_INNER);
-                    Lines.line(sx, sy, ex, ey);
-
-                    Draw.color(outer);
-                    Lines.stroke(CAP_LINE_WIDTH);
-                    Lines.line(osx + nx * halfWidth, osy + ny * halfWidth, osx - nx * halfWidth, osy - ny * halfWidth);
-                    Lines.line(oex + nx * halfWidth, oey + ny * halfWidth, oex - nx * halfWidth, oey - ny * halfWidth);
-
-                    float startX = bridge.x + ux * inset;
-                    float startY = bridge.y + uy * inset;
-                    float endX = target.x - ux * inset;
-                    float endY = target.y - uy * inset;
-                    float bridgeLen = Mathf.dst(endX - startX, endY - startY);
-                    int arrows = (int) (bridgeLen / arrowSpacing);
-                    if (arrows > 0) {
-                        float angle = Mathf.angle(dx, dy);
-                        float rad = angle * Mathf.degRad;
-                        boolean powered = bridge.efficiency > 0;
-                        for (int a = 0; a < arrows; a++) {
-                            float px = startX + ux * a * arrowSpacing;
-                            float py = startY + uy * a * arrowSpacing;
-                            float timeScl = powered ? arrowTimeScl : 4.2f;
-                            float alpha = Mathf.absin(a - Time.time / timeScl, arrowPeriod, 1f);
-                            if (alpha <= 0.01f) continue;
-                            float finalAlpha = powered ? alpha : 0.5f;
-                            Color color = ARROW_COLOR.lerp(POWER_LOSS_COLOR, loss);
-                            Draw.color(color, finalAlpha);
-                            Fill.tri(
-                                px + Mathf.cos(rad) * arrowSize, py + Mathf.sin(rad) * arrowSize,
-                                px + Mathf.cos(rad + Mathf.PI * 0.5f) * arrowSize, py + Mathf.sin(rad + Mathf.PI * 0.5f) * arrowSize,
-                                px + Mathf.cos(rad - Mathf.PI * 0.5f) * arrowSize, py + Mathf.sin(rad - Mathf.PI * 0.5f) * arrowSize
-                            );
-                        }
-                    }
-                }
-            }
-            Draw.z(prevZ);
-        });
     }
 }
