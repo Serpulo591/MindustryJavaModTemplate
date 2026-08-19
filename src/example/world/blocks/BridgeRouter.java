@@ -19,7 +19,7 @@ import mindustry.world.meta.*;
 import static mindustry.Vars.*;
 
 public class BridgeRouter extends StorageBlock {
-    // --- 常量（与 JS 完全一致） ---
+    // ---- 常量（与 JS 完全一致） ----
     public static final int range = 64;
     public static final int linkLimit = 4;
     public static final float warmupSpeed = 0.05f;
@@ -41,7 +41,9 @@ public class BridgeRouter extends StorageBlock {
     public static final Color LINE_COLOR_OUTER = Color.valueOf("c0edf4");
     public static final Color LINE_COLOR_INNER = Color.valueOf("a1d7ecb3");
     public static final Color ARROW_COLOR = Color.valueOf("c0edf4");
+    public static final Color CONFIG_LINE_COLOR = Color.valueOf("6335f8");
 
+    // ---- 构造 ----
     public BridgeRouter(String name) {
         super(name);
         update = true;
@@ -55,7 +57,7 @@ public class BridgeRouter extends StorageBlock {
         envEnabled = Env.any;
         allowConfigInventory = false;
 
-        // config(IntSeq)
+        // 配置类型：IntSeq（相对坐标序列）
         config(IntSeq.class, (BridgeRouterBuild tile, IntSeq seq) -> {
             Seq<Integer> links = new Seq<>();
             for (int i = 0; i < seq.size; i += 2) {
@@ -67,10 +69,10 @@ public class BridgeRouter extends StorageBlock {
             tile.setLink(links);
         });
 
-        // config(Integer)
+        // 配置类型：Integer（单个目标方块位置）
         config(Integer.class, (BridgeRouterBuild tile, Integer value) -> {
             int pos = value;
-            Seq<Integer> links = new Seq<>(tile.getLink());
+            Seq<Integer> links = tile.getLink();
             Integer intObj = pos;
             if (links.contains(intObj)) {
                 links.remove(intObj);
@@ -105,7 +107,7 @@ public class BridgeRouter extends StorageBlock {
         super.setBars();
         addBar("connections", (BridgeRouterBuild e) ->
             new Bar(
-                () -> "Connections: " + e.getLink().size + "/" + linkLimit,
+                () -> Core.bundle.format("bar.powerlines", e.getLink().size, linkLimit),
                 () -> Pal.accent,
                 () -> (float) e.getLink().size / linkLimit
             )
@@ -123,7 +125,7 @@ public class BridgeRouter extends StorageBlock {
         return true;
     }
 
-    // --- 内部 Building 类 ---
+    // ---- 内部 Building 类 ----
     public class BridgeRouterBuild extends StorageBuild {
         private Seq<Integer> links = new Seq<>();
         private float warmup = 0f;
@@ -140,13 +142,13 @@ public class BridgeRouter extends StorageBlock {
         }
 
         public Seq<Integer> getLink() { return links; }
-public void setLink(Seq<Integer> v) {
-    links = new Seq<>();
-    if (v != null) {
-        for (int i = 0; i < v.size; i++) links.add(v.get(i));
-    }
-    if (links.size > linkLimit) links.truncate(linkLimit);
-}
+        public void setLink(Seq<Integer> v) {
+            links = new Seq<>();
+            if (v != null) {
+                for (int i = 0; i < v.size; i++) links.add(v.get(i));
+            }
+            if (links.size > linkLimit) links.truncate(linkLimit);
+        }
         public float getPowerLoss() { return powerLoss; }
 
         @Override
@@ -154,9 +156,9 @@ public void setLink(Seq<Integer> v) {
             return !getLink().isEmpty();
         }
 
-        // 注意：父类没有这个方法，移除 @Override
+        // 手动更新效率（父类无此方法，直接操作字段）
         public void updateEfficiency() {
-            this.efficiency = Mathf.lerpDelta(this.efficiency, shouldConsume() ? 1 : 0, warmupSpeed);
+            this.efficiency = Mathf.lerpDelta(this.efficiency, shouldConsume() ? 1f : 0f, warmupSpeed);
         }
 
         @Override
@@ -165,22 +167,22 @@ public void setLink(Seq<Integer> v) {
             activeBridges.add(this);
         }
 
-@Override
-public void onRemoved() {
-    super.onRemoved();
-    // 先复制一份，避免遍历时修改列表导致崩溃
-    Seq<BridgeRouterBuild> copy = new Seq<>(activeBridges);
-    int myPos = pos();
-    for (BridgeRouterBuild other : copy) {
-        if (other == this) continue;
-        Seq<Integer> otherLinks = other.getLink();
-        if (otherLinks.contains(myPos)) {
-            otherLinks.remove(myPos);
-            other.setLink(otherLinks);
+        @Override
+        public void onRemoved() {
+            super.onRemoved();
+            // 清除其他桥中指向自己的链接
+            int myPos = pos();
+            Seq<BridgeRouterBuild> copy = new Seq<>(activeBridges);
+            for (BridgeRouterBuild other : copy) {
+                if (other == this) continue;
+                Seq<Integer> otherLinks = other.getLink();
+                if (otherLinks.contains(myPos)) {
+                    otherLinks.remove(myPos);
+                    other.setLink(otherLinks);
+                }
+            }
+            activeBridges.remove(this);
         }
-    }
-    activeBridges.remove(this);
-}
 
         @Override
         public boolean acceptItem(Building source, Item item) {
@@ -206,31 +208,36 @@ public void onRemoved() {
                 }
             }
 
+            // 更新效率和功率损失
+            updateEfficiency();
             boolean consValid = efficiency > 0;
             boolean itemSent = false;
-            powerLoss = Mathf.lerpDelta(powerLoss, consValid ? 0 : 1, 0.08f);
+            powerLoss = Mathf.lerpDelta(powerLoss, consValid ? 0f : 1f, 0.08f);
 
+            // 无连接时dump所有物品
             if (links.isEmpty()) {
                 if (items.total() > 0) {
                     for (Item item : content.items()) {
                         if (items.get(item) > 0) dump(item);
                     }
                 }
-                warmup = Mathf.lerpDelta(warmup, 0, warmupSpeed);
-                rotateSpeed = Mathf.lerpDelta(rotateSpeed, 0, warmupSpeed);
+                warmup = Mathf.lerpDelta(warmup, 0f, warmupSpeed);
+                rotateSpeed = Mathf.lerpDelta(rotateSpeed, 0f, warmupSpeed);
+                return;
             }
 
             if (!consValid) {
-                warmup = Mathf.lerpDelta(warmup, 0, warmupSpeed);
-                rotateSpeed = Mathf.lerpDelta(rotateSpeed, 0, warmupSpeed);
+                warmup = Mathf.lerpDelta(warmup, 0f, warmupSpeed);
+                rotateSpeed = Mathf.lerpDelta(rotateSpeed, 0f, warmupSpeed);
                 return;
             }
 
             if (items.total() <= 0) {
-                warmup = Mathf.lerpDelta(warmup, 0, warmupSpeed);
+                warmup = Mathf.lerpDelta(warmup, 0f, warmupSpeed);
                 return;
             }
 
+            // 发送物品
             if (!links.isEmpty() && Time.time % FRAME_DELAY < 1) {
                 // 清理无效链接
                 int i = links.size;
@@ -251,9 +258,7 @@ public void onRemoved() {
                             for (Item item : content.items()) {
                                 int amount = items.get(item);
                                 if (amount <= 0) continue;
-                                // 修正 Math.min 三参数问题
-                                int acceptAmount = Math.min(amount, 1);
-                                int accept = target.acceptStack(item, acceptAmount, this);
+                                int accept = target.acceptStack(item, 1, this);
                                 if (accept > 0) {
                                     TransportItem t = new TransportItem();
                                     t.item = item;
@@ -274,16 +279,15 @@ public void onRemoved() {
                 }
             }
 
-            warmup = Mathf.lerpDelta(warmup, links.isEmpty() ? 0 : 1, warmupSpeed);
-            rotateSpeed = Mathf.lerpDelta(rotateSpeed, itemSent ? 1 : 0, warmupSpeed);
+            warmup = Mathf.lerpDelta(warmup, links.isEmpty() ? 0f : 1f, warmupSpeed);
+            rotateSpeed = Mathf.lerpDelta(rotateSpeed, itemSent ? 1f : 0f, warmupSpeed);
         }
 
-        // --- 绘制所有链接（在 draw() 中调用）---
+        // ---- 绘制 ----
         @Override
         public void draw() {
             super.draw();
             Draw.z(Layer.block + 1);
-            // 绘制所有有效链接（包括自己的和指向自己的）
             drawAllLinks();
             Draw.z(Layer.block);
         }
@@ -291,7 +295,7 @@ public void onRemoved() {
         private void drawAllLinks() {
             if (activeBridges.isEmpty()) return;
 
-            // 1. 绘制自己的链接
+            // 绘制自己的链接
             for (int pos : links) {
                 Building target = world.build(pos);
                 if (target == null || target.team != team || target.block != this.block) continue;
@@ -299,11 +303,10 @@ public void onRemoved() {
             }
         }
 
-        // 绘制单条连接线（含箭头）
         private void drawLinkLine(Building from, Building to) {
             float loss = getPowerLoss();
             Color outer = LINE_COLOR_OUTER.lerp(POWER_LOSS_COLOR, loss);
-            Color inner = LINE_COLOR_INNER.lerp(POWER_LOSS_INNER_COLOR, efficiency <= 0 ? 1 : 0);
+            Color inner = LINE_COLOR_INNER.lerp(POWER_LOSS_INNER_COLOR, efficiency <= 0 ? 1f : 0f);
 
             float dx = to.x - from.x, dy = to.y - from.y;
             float length = Mathf.dst(dx, dy);
@@ -323,8 +326,10 @@ public void onRemoved() {
 
             Draw.color(outer);
             Lines.stroke(LINE_WIDTH_OUTER);
-            Lines.line(outerStartX + nx * offset, outerStartY + ny * offset, outerEndX + nx * offset, outerEndY + ny * offset);
-            Lines.line(outerStartX - nx * offset, outerStartY - ny * offset, outerEndX - nx * offset, outerEndY - ny * offset);
+            Lines.line(outerStartX + nx * offset, outerStartY + ny * offset,
+                       outerEndX + nx * offset, outerEndY + ny * offset);
+            Lines.line(outerStartX - nx * offset, outerStartY - ny * offset,
+                       outerEndX - nx * offset, outerEndY - ny * offset);
 
             Draw.color(inner);
             Lines.stroke(LINE_WIDTH_INNER);
@@ -332,8 +337,10 @@ public void onRemoved() {
 
             Draw.color(outer);
             Lines.stroke(CAP_LINE_WIDTH);
-            Lines.line(outerStartX + nx * offset, outerStartY + ny * offset, outerStartX - nx * offset, outerStartY - ny * offset);
-            Lines.line(outerEndX + nx * offset, outerEndY + ny * offset, outerEndX - nx * offset, outerEndY - ny * offset);
+            Lines.line(outerStartX + nx * offset, outerStartY + ny * offset,
+                       outerStartX - nx * offset, outerStartY - ny * offset);
+            Lines.line(outerEndX + nx * offset, outerEndY + ny * offset,
+                       outerEndX - nx * offset, outerEndY - ny * offset);
 
             // 流动箭头
             drawFlowArrows(from, to, efficiency > 0, loss);
@@ -373,7 +380,7 @@ public void onRemoved() {
             }
         }
 
-        // --- 配置绘制（保持不变） ---
+        // ---- 配置绘制（drawConfigure） ----
         @Override
         public void drawConfigure() {
             float pulse = Mathf.absin(Time.time, 4f, 1f);
@@ -381,6 +388,7 @@ public void onRemoved() {
             Lines.stroke(1f);
             Drawf.select(x, y, tile.block().size * tilesize / 2f + 2f, Pal.accent);
 
+            // 高亮已连接的方块
             for (int pos : links) {
                 if (linkValid(this, pos)) {
                     Building target = world.build(pos);
@@ -389,6 +397,7 @@ public void onRemoved() {
                 }
             }
 
+            // 高亮可连接但未连接的方块（指向自己的）
             Integer myPosInt = pos();
             for (BridgeRouterBuild other : activeBridges) {
                 if (!other.isValid() || other == this || other.team != team || !within(other, range)) continue;
@@ -405,7 +414,8 @@ public void onRemoved() {
             }
 
             Draw.z(Layer.block + 1);
-            // 灰色粗线（自己的链接）
+
+            // 灰色粗线：自己的链接
             for (int pos : links) {
                 if (linkValid(this, pos)) {
                     Building target = world.build(pos);
@@ -421,7 +431,7 @@ public void onRemoved() {
                     Lines.line(sx, sy, ex, ey);
                 }
             }
-            // 灰色粗线（指向自己的链接）
+            // 灰色粗线：指向自己的链接
             for (BridgeRouterBuild other : activeBridges) {
                 if (!other.isValid() || other == this || other.team != team) continue;
                 if (!other.getLink().contains(myPosInt)) continue;
@@ -452,7 +462,7 @@ public void onRemoved() {
                 Drawf.square(other.x, other.y, 1f, Pal.accent);
             }
 
-            // 彩色细线（紫色和黄色）
+            // 彩色细线：紫色（自己的链接）
             for (int pos : links) {
                 if (linkValid(this, pos)) {
                     Building target = world.build(pos);
@@ -463,11 +473,12 @@ public void onRemoved() {
                     float ux = dx / dist, uy = dy / dist;
                     float sx = x + ux * LINE_INSET1, sy = y + uy * LINE_INSET1;
                     float ex = target.x - ux * LINE_INSET1, ey = target.y - uy * LINE_INSET1;
-                    Draw.color(Color.valueOf("662fff"));
+                    Draw.color(CONFIG_LINE_COLOR);
                     Lines.stroke(1f);
                     Lines.line(sx, sy, ex, ey);
                 }
             }
+            // 彩色细线：黄色（指向自己的链接）
             for (BridgeRouterBuild other : activeBridges) {
                 if (!other.isValid() || other == this || other.team != team) continue;
                 if (!other.getLink().contains(myPosInt)) continue;
@@ -483,7 +494,7 @@ public void onRemoved() {
                 Lines.line(sx, sy, ex, ey);
             }
 
-            // 流动箭头（配置模式下也显示）
+            // 配置模式下也显示流动箭头（仅自己的链接）
             for (int pos : links) {
                 if (linkValid(this, pos)) {
                     Building target = world.build(pos);
@@ -499,6 +510,7 @@ public void onRemoved() {
             }
 
             Drawf.dashCircle(x, y, range - tilesize, Pal.accent);
+            Draw.z(Layer.block);
         }
 
         private boolean linkValid(BridgeRouterBuild the, int pos) {
@@ -585,6 +597,6 @@ public void onRemoved() {
         }
     }
 
-    // 静态活跃桥列表（用于绘制）
+    // 全局活跃桥列表（用于绘制）
     private static final Seq<BridgeRouterBuild> activeBridges = new Seq<>();
 }
