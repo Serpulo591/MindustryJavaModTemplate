@@ -29,9 +29,9 @@ public class BridgeRouter extends StorageBlock {
     public final int timerCheckMoved = timers ++;
     public int range;
     public float transportTime;
-    public @Load("@-end") TextureRegion endRegion;
-    public @Load("@-bridge") TextureRegion bridgeRegion;
-    public @Load("@-arrow") TextureRegion arrowRegion;
+    public TextureRegion endRegion;
+    public TextureRegion bridgeRegion;
+    public TextureRegion arrowRegion;
     public boolean fadeIn = true;
     public boolean moveArrows = true;
     public boolean pulse = false;
@@ -61,6 +61,9 @@ public class BridgeRouter extends StorageBlock {
         delayLandingConfig = true;
         config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> tile.link = Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
         config(Integer.class, (BridgeRouterBuild tile, Integer i) -> tile.link = i);
+        endRegion = Core.atlas.find(name + "-end");
+        bridgeRegion = Core.atlas.find(name + "-bridge");
+        arrowRegion = Core.atlas.find(name + "-arrow");
     }
     
     @Override
