@@ -132,6 +132,12 @@ public class BridgeRouter extends StorageBlock {
     
             Tile otherLink = linked ? other : tile;
             int rel = (linked ? tile : other).absoluteRelativeTo(otherLink.x, otherLink.y);
+        }
+        
+        @Override
+        public void drawConfigure(){
+            Drawf.select(x, y, tile.block().size * tilesize / 2f + 2f, Pal.accent);
+            Drawf.dashCircle(x, y, range * tilesize, Pal.accent);
     
             Draw.color(Pal.gray);
             Lines.stroke(2.5f);
@@ -148,12 +154,6 @@ public class BridgeRouter extends StorageBlock {
             Draw.color();
             Draw.rect("bridge-arrow", x, y, rel * 90);
             Draw.mixcol();
-        }
-        
-        @Override
-        public void drawConfigure(){
-            Drawf.select(x, y, tile.block().size * tilesize / 2f + 2f, Pal.accent);
-            Drawf.dashCircle(x, y, range * tilesize, Pal.accent);
             int r = range + tilesize;
             for(int dx = -r; dx <= r; dx++){
                 for(int dy = -r; dy <= r; dy++){
