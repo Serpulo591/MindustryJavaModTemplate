@@ -1,4 +1,4 @@
-package example.world.blocks; // 根据您的实际包名调整
+package example.world.blocks;
 
 import arc.graphics.Color;
 import arc.graphics.g2d.*;
@@ -8,8 +8,7 @@ import arc.struct.IntSeq;
 import arc.struct.Seq;
 import arc.util.*;
 import arc.util.io.*;
-import mindustry.annotations.Annotations.*;
-import mindustry.core.*;
+import mindustry.core.Core;
 import mindustry.entities.*;
 import mindustry.game.*;
 import mindustry.gen.*;
@@ -23,16 +22,16 @@ import mindustry.world.meta.*;
 import static mindustry.Vars.*;
 
 public class BridgeRouter extends StorageBlock {
-    // 配置常量
-    public int range = 64;
-    public int linkLimit = 4;
-    public float warmupSpeed = 0.05f;
-    public float transportDelay = 60f;
-    public float arrowTimeScl = 12.6f;
-    public float arrowSpacing = 4f;
-    public float arrowOffset = 2f;
-    public float arrowPeriod = 0.4f;
-    public float arrowSize = 2.4f;
+    // 配置常量（全部 static final）
+    public static final int range = 64;
+    public static final int linkLimit = 4;
+    public static final float warmupSpeed = 0.05f;
+    public static final float transportDelay = 60f;
+    public static final float arrowTimeScl = 12.6f;
+    public static final float arrowSpacing = 4f;
+    public static final float arrowOffset = 2f;
+    public static final float arrowPeriod = 0.4f;
+    public static final float arrowSize = 2.4f;
     public static final int FRAME_DELAY = 1;
     public static final float LINE_INSET1 = 2f;
     public static final float LINE_INSET = 4f;
@@ -41,7 +40,6 @@ public class BridgeRouter extends StorageBlock {
     public static final float LINE_WIDTH_INNER = 4f;
     public static final float CAP_LINE_WIDTH = 1f;
 
-    // 颜色
     public static final Color POWER_LOSS_COLOR = Color.valueOf("f49fa680");
     public static final Color POWER_LOSS_INNER_COLOR = Color.valueOf("ec767859");
     public static final Color LINE_COLOR_OUTER = Color.valueOf("c0edf4");
@@ -94,8 +92,7 @@ public class BridgeRouter extends StorageBlock {
         return true;
     }
 
-    // 配置方法：使用 IntSeq 存储所有链接的相对坐标
-    @Remote
+    // config(IntSeq)
     public void config(IntSeq seq, BridgeRouterBuild tile) {
         Seq<Integer> newLinks = new Seq<>();
         for (int i = 0; i < seq.size; i += 2) {
@@ -107,26 +104,22 @@ public class BridgeRouter extends StorageBlock {
         tile.setLinks(newLinks);
     }
 
-    // 配置方法：点击切换单个链接
-    @Remote
+    // config(Integer)
     public void config(Integer value, BridgeRouterBuild tile) {
         int pos = value;
         Seq<Integer> links = tile.links;
         if (links.contains(pos)) {
-            // 移除自身链接
-            links.removeValue(pos, true);
-            // 同时断开对方对自己的链接（避免双向）
+            links.remove(pos);
             Building other = world.build(pos);
             if (other instanceof BridgeRouterBuild b && b.team == tile.team) {
-                b.links.removeValue(tile.pos(), true);
+                b.links.remove(tile.pos());
             }
         } else {
             if (links.size >= linkLimit) return;
             links.add(pos);
-            // 如果对方已有自己的链接，则移除对方的反向链接
             Building other = world.build(pos);
             if (other instanceof BridgeRouterBuild b && b.team == tile.team) {
-                b.links.removeValue(tile.pos(), true);
+                b.links.remove(tile.pos());
             }
         }
         tile.setLinks(links);
@@ -154,7 +147,7 @@ public class BridgeRouter extends StorageBlock {
         @Override
         public void onRemoved() {
             super.onRemoved();
-            activeBridges.removeValue(this, true);
+            activeBridges.remove(this);
         }
 
         public void setLinks(Seq<Integer> newLinks) {
@@ -177,7 +170,6 @@ public class BridgeRouter extends StorageBlock {
         public void updateTile() {
             super.updateTile();
 
-            // 处理运输队列
             for (int i = transportQueue.size - 1; i >= 0; i--) {
                 TransportItem t = transportQueue.get(i);
                 t.time -= edelta();
@@ -207,9 +199,7 @@ public class BridgeRouter extends StorageBlock {
                 return;
             }
 
-            // 每帧尝试向每个链接发送一个物品
             if (Time.time % FRAME_DELAY < 1) {
-                // 清理无效链接
                 for (int i = links.size - 1; i >= 0; i--) {
                     int pos = links.get(i);
                     if (!linkValid(pos)) {
@@ -252,11 +242,6 @@ public class BridgeRouter extends StorageBlock {
         }
 
         @Override
-        public void draw() {
-            super.draw();
-        }
-
-        @Override
         public void drawConfigure() {
             Drawf.dashCircle(x, y, range - tilesize, Pal.accent);
 
@@ -270,7 +255,6 @@ public class BridgeRouter extends StorageBlock {
                 }
             }
 
-            // 显示范围内可连接的其他桥
             for (Building other : activeBridges) {
                 if (other == this || other.team != team || !within(other, range)) continue;
                 if (other.block == BridgeRouter.this) {
@@ -282,7 +266,6 @@ public class BridgeRouter extends StorageBlock {
             }
 
             Draw.z(Layer.block + 1);
-            // 绘制自己的连接线
             for (int pos : links) {
                 if (linkValid(pos)) {
                     Building target = world.build(pos);
@@ -291,17 +274,15 @@ public class BridgeRouter extends StorageBlock {
                     }
                 }
             }
-            // 绘制指向自己的连接线（来自其他桥）
             for (Building other : activeBridges) {
                 if (other == this || other.team != team) continue;
                 if (other.block == BridgeRouter.this && other.<BridgeRouterBuild>as().links.contains(pos())) {
                     if (!links.contains(other.pos())) {
-                        drawConnectionLine(other, this, Pal.orange, 1f);
+                        drawConnectionLine(other, this, Pal.accent, 1f);
                     }
                 }
             }
 
-            // 流动箭头（仅自己的链接）
             for (int pos : links) {
                 if (linkValid(pos)) {
                     Building target = world.build(pos);
@@ -406,7 +387,6 @@ public class BridgeRouter extends StorageBlock {
         }
     }
 
-    // 全局绘制
     private static final Seq<BridgeRouterBuild> activeBridges = new Seq<>();
 
     static {
@@ -417,7 +397,7 @@ public class BridgeRouter extends StorageBlock {
 
             for (BridgeRouterBuild bridge : activeBridges) {
                 if (!bridge.isValid() || world.build(bridge.pos()) != bridge) {
-                    activeBridges.removeValue(bridge, true);
+                    activeBridges.remove(bridge);
                     continue;
                 }
                 if (bridge.links.isEmpty()) continue;
@@ -461,8 +441,6 @@ public class BridgeRouter extends StorageBlock {
                     Lines.line(osx + nx * halfWidth, osy + ny * halfWidth, osx - nx * halfWidth, osy - ny * halfWidth);
                     Lines.line(oex + nx * halfWidth, oey + ny * halfWidth, oex - nx * halfWidth, oey - ny * halfWidth);
 
-                    // 绘制箭头
-                    float totalDist = len;
                     float startX = bridge.x + ux * inset;
                     float startY = bridge.y + uy * inset;
                     float endX = target.x - ux * inset;
