@@ -153,9 +153,7 @@ public class BridgeRouter extends StorageBlock {
         @Override
         public void drawConfigure(){
             Drawf.select(x, y, tile.block().size * tilesize / 2f + 2f, Pal.accent);
-            Draw.z(Layer.block + 1);
-            Drawf.dashCircle(x * tilesize + tilesize/2f, y * tilesize + tilesize/2f, range * tilesize, Pal.accent);
-            Draw.z(Layer.block);
+            Drawf.dashCircle(x, y, tile.block().size * tilesize / 2f + 2f, Pal.accent);
             int r = range;
             for(int dx = -r; dx <= r; dx++){
                 for(int dy = -r; dy <= r; dy++){
