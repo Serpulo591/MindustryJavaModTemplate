@@ -256,53 +256,61 @@ public class BridgeRouter extends StorageBlock {
         @Override
         public void draw(){
             super.draw();
-
-            Draw.z(Layer.power);
-
+        
             Tile other = world.tile(link);
             if(!linkValid(tile, other)) return;
-
             if(Mathf.zero(Renderer.bridgeOpacity)) return;
-
-            int i = relativeTo(other.x, other.y);
-
-            if(pulse){
-                Draw.color(Color.white, Color.black, Mathf.absin(Time.time, 6f, 0.07f));
-            }
-
+        
+            float tx = drawx(), ty = drawy();
+            float ox = other.drawx(), oy = other.drawy();
+        
+            float dx = ox - tx, dy = oy - ty;
+            float len = Mathf.dst(dx, dy);
+            if(len < 1f) return;
+            float nx = dx / len, ny = dy / len;
+        
+            float px = -ny, py = nx;
+        
+            float inset = tilesize / 2f;
+            float startX = tx + nx * inset, startY = ty + ny * inset;
+            float endX = ox - nx * inset, endY = oy - ny * inset;
+        
+            // ---- 1. 绘制两条平行外线 ----
+            float offset = 2.5f;
+            Draw.color(Pal.gray);
+            Lines.stroke(2.5f);
+            Lines.line(startX + px * offset, startY + py * offset,
+                       endX + px * offset, endY + py * offset);
+            Lines.line(startX - px * offset, startY - py * offset,
+                       endX - px * offset, endY - py * offset);
+        
+            // ---- 2. 绘制内线（效率低时变色） ----
             float warmup = hasPower ? this.warmup : 1f;
-
-            Draw.alpha((fadeIn ? Math.max(warmup, 0.25f) : 1f) * Renderer.bridgeOpacity);
-
-            Draw.rect(endRegion, x, y, i * 90 + 90);
-            Draw.rect(endRegion, other.drawx(), other.drawy(), i * 90 + 270);
-
-            Lines.stroke(bridgeWidth);
-
-            Tmp.v1.set(x, y).sub(other.worldx(), other.worldy()).setLength(tilesize/2f).scl(-1f);
-
-            Lines.line(bridgeRegion,
-            x + Tmp.v1.x,
-            y + Tmp.v1.y,
-            other.worldx() - Tmp.v1.x,
-            other.worldy() - Tmp.v1.y, false);
-
-            int dist = Math.max(Math.abs(other.x - tile.x), Math.abs(other.y - tile.y)) - 1;
-
-            Draw.color();
-
-            if(Lod.l1){
-                int arrows = (int)(dist * tilesize / arrowSpacing), dx = Geometry.d4x(i), dy = Geometry.d4y(i);
-
-                for(int a = 0; a < arrows; a++){
-                    Draw.alpha(Mathf.absin(a - time / arrowTimeScl, arrowPeriod, 1f) * warmup * Renderer.bridgeOpacity * Lod.alpha1);
-                    Draw.rect(arrowRegion,
-                    x + dx * (tilesize / 2f + a * arrowSpacing + arrowOffset),
-                    y + dy * (tilesize / 2f + a * arrowSpacing + arrowOffset),
-                    i * 90f);
-                }
+            Draw.color(warmup < 0.5f ? Pal.ammo : Pal.accent);
+            Lines.stroke(1f);
+            Lines.line(startX, startY, endX, endY);
+        
+            // ---- 3. 绘制两端端帽 ----
+            Draw.color(Pal.accent);
+            Lines.stroke(2f);
+            float capLen = 4f;
+            Lines.line(startX + px * capLen, startY + py * capLen,
+                       startX - px * capLen, startY - py * capLen);
+            Lines.line(endX + px * capLen, endY + py * capLen,
+                       endX - px * capLen, endY - py * capLen);
+        
+            // ---- 4. 绘制流动箭头 ----
+            Draw.color(Pal.accent);
+            int arrows = Math.max(1, (int)(len / arrowSpacing));
+            for(int i = 0; i < arrows; i++){
+                float progress = (i / (float)arrows + time / arrowTimeScl) % 1f;
+                float alpha = Mathf.absin(progress * arrows - time / arrowTimeScl, arrowPeriod, 1f);
+                Draw.alpha(alpha * warmup * Renderer.bridgeOpacity);
+                float ax = Mathf.lerp(startX, endX, progress);
+                float ay = Mathf.lerp(startY, endY, progress);
+                Fill.circle(ax, ay, 2f);
             }
-
+        
             Draw.reset();
         }
         
