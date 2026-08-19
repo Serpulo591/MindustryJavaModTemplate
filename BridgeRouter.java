@@ -77,7 +77,11 @@ config(Integer.class, (BridgeRouterBuild tile, Integer value) -> {
     Integer intObj = pos;
 
     if (links.contains(intObj)) {
-        links.remove(intObj);
+int index = links.indexOf(intObj);
+
+if (index >= 0) {
+    links.remove(index);
+}
     } else {
         if (links.size >= linkLimit) return;
         links.add(intObj);
@@ -183,10 +187,15 @@ public void created() {
             for (BridgeRouterBuild other : copy) {
                 if (other == this) continue;
                 Seq<Integer> otherLinks = other.getLink();
-                if (otherLinks.contains(myPos)) {
-                    otherLinks.removeValue(myPos);
-                    b.setLink(otherLinks);
-                }
+if (otherLinks.contains(myPos)) {
+    int index = otherLinks.indexOf(myPos);
+
+    if (index >= 0) {
+        otherLinks.remove(index);
+    }
+
+    other.setLink(otherLinks);
+}
             }
             activeBridges.remove(this);
         }
