@@ -172,7 +172,9 @@ public class BridgeRouter extends StorageBlock {
         public boolean onConfigureBuildTapped(Building other){
             //reverse connection
             if(other instanceof BridgeRouterBuild b && b.link == pos()){
-                return true;
+                configure(other.pos());
+                other.configure(-1);
+                return false;
             }
 
             if(linkValid(tile, other.tile)){
