@@ -261,7 +261,7 @@ public class BridgeRouter extends StorageBlock {
             if(!linkValid(tile, other)) return;
             if(Mathf.zero(Renderer.bridgeOpacity)) return;
         
-            float tx = drawx(), ty = drawy();
+            float tx = tile.drawx(), ty = tile.drawy();
             float ox = other.drawx(), oy = other.drawy();
         
             float dx = ox - tx, dy = oy - ty;
