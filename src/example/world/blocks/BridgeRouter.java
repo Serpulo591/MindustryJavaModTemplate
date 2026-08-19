@@ -136,6 +136,7 @@ public void setBars() {
         private Seq<TransportItem> transport = new Seq<>();
         private float powerLoss = 0f;
         private float creationTime;
+        private boolean configuring = false;
 
         private static class TransportItem {
             Item item;
@@ -553,34 +554,28 @@ public void created() {
 
 @Override
 public boolean onConfigureBuildTapped(Building other) {
-    // 获取当前被选中的建筑（玩家点击进入配置模式的建筑）
-    Building selected = control.input.config.getSelected();
 
-    // 如果点击的不是自身，且没有选中任何建筑，或者选中的不是自身，则忽略点击
-    if (other != this && (selected == null || selected != this)) {
-        return false; // 不是自身点击，且未进入配置模式，拒绝
-    }
-
+    // 点击自己：进入/退出本桥的配置模式
     if (other == this) {
-        // 点击自身：清空所有链接（包括指向自己的）
-        setLink(new Seq<>());
-        int myPos = pos();
-        for (BridgeRouterBuild b : activeBridges) {
-            if (b != this && b.getLink().contains(myPos)) {
-                b.getLink().remove(myPos);
-                b.setLink(b.getLink());
-            }
-        }
+        configuring = !configuring;
         return false;
     }
 
-    // 点击其他桥：只有当前选中的是自身，才允许连接
-    if (other != null && other.team == team && other.block == BridgeRouter.this && within(other, range)) {
-        if (selected == this) {
-            configure(other.pos());
-        }
+    // 当前桥没有进入配置模式，不允许连接其他桥
+    if (!configuring) {
         return false;
     }
+
+    // 配置模式下点击其他 BridgeRouter
+    if (other != null
+        && other.team == team
+        && other.block == BridgeRouter.this
+        && within(other, range)) {
+
+        configure(other.pos());
+        return false;
+    }
+
     return false;
 }
 
