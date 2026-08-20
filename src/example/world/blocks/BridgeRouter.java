@@ -309,21 +309,11 @@ public void draw(){
 
     Draw.alpha(Renderer.bridgeOpacity);
 
-    // ---- 绘制线条（不受冻结影响） ----
+    // 绘制线条（不变）
     Draw.color(outerColor);
     Lines.stroke(1f);
-    Lines.line(
-        outerStartX + nx * offset,
-        outerStartY + ny * offset,
-        outerEndX + nx * offset,
-        outerEndY + ny * offset
-    );
-    Lines.line(
-        outerStartX - nx * offset,
-        outerStartY - ny * offset,
-        outerEndX - nx * offset,
-        outerEndY - ny * offset
-    );
+    Lines.line(outerStartX + nx * offset, outerStartY + ny * offset, outerEndX + nx * offset, outerEndY + ny * offset);
+    Lines.line(outerStartX - nx * offset, outerStartY - ny * offset, outerEndX - nx * offset, outerEndY - ny * offset);
 
     Draw.color(innerColor);
     Lines.stroke(4f);
@@ -331,65 +321,27 @@ public void draw(){
 
     Draw.color(outerColor);
     Lines.stroke(1f);
-    Lines.line(
-        outerStartX + nx * offset,
-        outerStartY + ny * offset,
-        outerStartX - nx * offset,
-        outerStartY - ny * offset
-    );
-    Lines.line(
-        outerEndX + nx * offset,
-        outerEndY + ny * offset,
-        outerEndX - nx * offset,
-        outerEndY - ny * offset
-    );
+    Lines.line(outerStartX + nx * offset, outerStartY + ny * offset, outerStartX - nx * offset, outerStartY - ny * offset);
+    Lines.line(outerEndX + nx * offset, outerEndY + ny * offset, outerEndX - nx * offset, outerEndY - ny * offset);
 
-    // ---- 箭头部分（核心冻结逻辑） ----
+    // ---- 箭头 ----
     int arrows = (int)(length / arrowSpacing);
     if(arrows > 0){
         boolean hasItems = items.total() > 0 && hadValidLink && enabled;
 
-        // 如果有物品，则解除冻结状态（但不在绘制中修改冻结变量，以避免并发问题，可以在update中处理）
-        // 我们将在update中处理冻结状态切换，这里只读取冻结值
-        // 但为了简化，可以在draw中判断是否首次冻结并记录
-        if (!hasItems && !frozen) {
-            // 首次进入无物品状态，冻结当前（但此时我们需要计算当前的alpha和warmup）
-            // 我们可以计算一个示例箭头的alpha值（比如第一个箭头），但最好记录所有箭头，但为简化，我们可以冻结整个动画参数
-            // 真正的冻结应该记录每个箭头的alpha，但我们可以冻结时间因子timeFactor
-            // 因为alpha = absin(a - timeFactor, period, 1)，如果timeFactor固定，alpha就固定
-            // 所以我们只需要记录冻结时的timeFactor即可
-            // 更方便：我们直接记录冻结时的timeFactor
-            // 但由于timeFactor取决于Time.time，我们可以记录冻结时刻的timeFactor
-            // 我们新增字段 frozenTimeFactor
-        }
-
-        // 更好的做法：在update中处理冻结状态，这里直接使用frozen标志和frozenTimeFactor
-        // 为了完善，我们添加字段 float frozenTimeFactor;
-        // 在update中：
-        // if (items.total() == 0 && !frozen) { frozen = true; frozenTimeFactor = Time.time / arrowTimeScl; frozenWarmup = warmup; }
-        // else if (items.total() > 0) { frozen = false; }
+        float timeFactor = hasItems ? Time.time / arrowTimeScl : frozenTimeFactor;
+        float effectiveWarmup = hasItems ? warmup : frozenWarmup;
 
         float angle = Angles.angle(dx, dy);
         float rad = angle * Mathf.degRad;
 
         Draw.color(outerColor);
 
-        // 计算时间因子
-        float timeFactor;
-        float effectiveWarmup;
-        if (hasItems) {
-            timeFactor = Time.time / arrowTimeScl;
-            effectiveWarmup = warmup;
-        } else {
-            // 冻结状态：使用记录的冻结值
-            timeFactor = frozenTimeFactor;
-            effectiveWarmup = frozenWarmup;
-        }
-
         for(int a = 0; a < arrows; a++){
             float px = tx + ux * (inset + a * arrowSpacing);
             float py = ty + uy * (inset + a * arrowSpacing);
 
+            // 透明度平滑正弦波（调整 arrowPeriod 可改变闪烁频率，数值越大变化越平缓）
             float alpha = Mathf.absin(a - timeFactor, arrowPeriod, 1f);
             if(alpha <= 0.01f) continue;
 
