@@ -105,6 +105,7 @@ public class BridgeRouter extends Block {
         public IntSeq incoming = new IntSeq(false, 4);
         public float warmup;
         public float time = -8f, timeSpeed;
+        public float arrowTime;
         public boolean wasMoved, moved, hadValidLink;
         public float transportCounter;
     
@@ -207,6 +208,10 @@ public class BridgeRouter extends Block {
         @Override
         public void updateTile(){
             noSleep();
+            if(enabled){
+                arrowTime += delta();
+            }
+
             if(timer(timerCheckMoved, 30f)){
                 wasMoved = moved;
                 moved = false;
@@ -382,51 +387,50 @@ public void draw(){
         outerEndY - ny * offset
     );
 
-    //========================================
-    // 流动箭头
-    //========================================
+//========================================
+// 流动箭头
+//========================================
 
-    int arrows = (int)(length / arrowSpacing);
+int arrows = (int)(length / arrowSpacing);
 
-    if(arrows > 0){
-        float angle = Angles.angle(dx, dy);
-        float rad = angle * Mathf.degRad;
+if(arrows > 0){
+    float angle = Angles.angle(dx, dy);
+    float rad = angle * Mathf.degRad;
+    float size = 2.4f;
 
-        Draw.color(outerColor);
+    // 箭头始终绘制
+    // enabled 时 arrowTime 增加
+    // disabled 时 arrowTime 停止
+    Draw.color(outerColor);
+    Draw.alpha(Renderer.bridgeOpacity);
 
-        for(int a = 0; a < arrows; a++){
+    for(int a = 0; a < arrows; a++){
 
-            float px = tx + ux * (inset + a * arrowSpacing);
-            float py = ty + uy * (inset + a * arrowSpacing);
+        float distance =
+            inset
+            + a * arrowSpacing
+            + (arrowTime / arrowTimeScl) % arrowSpacing;
 
-            float alpha = Mathf.absin(
-                a - Time.time / arrowTimeScl,
-                arrowPeriod,
-                1f
-            );
-
-            if(alpha <= 0.01f) continue;
-
-            Draw.alpha(
-                alpha *
-                warmup *
-                Renderer.bridgeOpacity
-            );
-
-            float size = 2.4f;
-
-            Fill.tri(
-                px + Mathf.cos(rad) * size,
-                py + Mathf.sin(rad) * size,
-
-                px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
-                py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
-
-                px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
-                py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
-            );
+        //循环回到起点
+        if(distance > length - inset){
+            distance -= length - inset;
         }
+
+        float px = tx + ux * distance;
+        float py = ty + uy * distance;
+
+        Fill.tri(
+            px + Mathf.cos(rad) * size,
+            py + Mathf.sin(rad) * size,
+
+            px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
+            py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
+
+            px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
+            py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
+        );
     }
+}
 
     Draw.reset();
 }
