@@ -294,17 +294,21 @@ public class BridgeRouter extends Block {
                        endX - px * capLen, endY - py * capLen);
         
             // ---- 4. 绘制流动箭头 ----
-            Draw.color(Pal.accent);
-            int arrows = Math.max(1, (int)(len / arrowSpacing));
-            for(int i = 0; i < arrows; i++){
-                float progress = (i / (float)arrows + time / arrowTimeScl) % 1f;
-                float alpha = Mathf.absin(progress * arrows - time / arrowTimeScl, arrowPeriod, 1f);
-                Draw.alpha(alpha * warmup * Renderer.bridgeOpacity);
-                float ax = Mathf.lerp(startX, endX, progress);
-                float ay = Mathf.lerp(startY, endY, progress);
-                Fill.circle(ax, ay, 2f);
+            for (int a = 0; a < arrows; a++) {
+                float px = startX + normX * a * arrowSpacing;
+                float py = startY + normY * a * arrowSpacing;
+                float alpha = Mathf.absin(a - Time.time / arrowTimeScl, arrowPeriod, 1f);
+                if (alpha <= 0.01f) continue;
+                float finalAlpha = alpha * opacity;
+
+                Draw.color(color, finalAlpha);
+                Fill.tri(
+                    px + Mathf.cos(rad) * arrowSize, py + Mathf.sin(rad) * arrowSize,
+                    px + Mathf.cos(rad + Mathf.PI / 2f) * arrowSize, py + Mathf.sin(rad + Mathf.PI / 2f) * arrowSize,
+                    px + Mathf.cos(rad - Mathf.PI / 2f) * arrowSize, py + Mathf.sin(rad - Mathf.PI / 2f) * arrowSize
+                );
             }
-        
+
             Draw.reset();
         }
         
