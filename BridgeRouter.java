@@ -385,7 +385,7 @@ public void draw(){
     // 流动箭头（未启用时静止）
     //========================================
 
-    Draw.z(Layer.blockOver + 0.01);
+    Draw.z(Layer.blockOver);
     float arrowLength = length - inset * 2f;
     int arrows = (int)(arrowLength / arrowSpacing);
 
@@ -420,18 +420,17 @@ float py = ty + uy * dist;
             float displayAlpha = (warmup > 0f) ? alpha * warmup : alpha;
             Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
 
-            float length = 1.5f;
-            float height = 30f;
+            float size = 1.5f;
 
             Fill.tri(
-                px + Mathf.cos(rad) * length,
-                py + Mathf.sin(rad) * length,
+                px + Mathf.cos(rad) * size,
+                py + Mathf.sin(rad) * size,
 
-                px + Mathf.cos(rad + Mathf.PI * 0.75f) * height,
-                py + Mathf.sin(rad + Mathf.PI * 0.75f) * height,
+                px + Mathf.cos(rad + Mathf.PI * 0.25f) * size,
+                py + Mathf.sin(rad + Mathf.PI * 0.25f) * size,
 
-                px + Mathf.cos(rad - Mathf.PI * 0.75f) * height,
-                py + Mathf.sin(rad - Mathf.PI * 0.75f) * height
+                px + Mathf.cos(rad - Mathf.PI * 0.25f) * size,
+                py + Mathf.sin(rad - Mathf.PI * 0.25f) * size
             );
         }
     }
