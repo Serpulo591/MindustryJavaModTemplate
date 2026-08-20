@@ -252,12 +252,12 @@ public class BridgeRouter extends Block {
         }
         
 @Override
-public void draw() {
+public void draw(){
     super.draw();
 
     Tile other = world.tile(link);
-    if (!linkValid(tile, other)) return;
-    if (Mathf.zero(Renderer.bridgeOpacity)) return;
+    if(!linkValid(tile, other)) return;
+    if(Mathf.zero(Renderer.bridgeOpacity)) return;
 
     float tx = tile.drawx();
     float ty = tile.drawy();
@@ -267,44 +267,38 @@ public void draw() {
     float dx = ox - tx;
     float dy = oy - ty;
     float length = Mathf.dst(dx, dy);
-    if (length <= 0.001f) return;
+    if(length <= 0.001f) return;
 
-    // 单位方向
     float ux = dx / length;
     float uy = dy / length;
-    // 法线方向
     float nx = -uy;
     float ny = ux;
 
-    // 基础参数
     float offset = 2f;
     float inset = 4f;
     float extend = 1.5f;
 
-    // 内线起止点
     float innerStartX = tx + ux * inset;
     float innerStartY = ty + uy * inset;
     float innerEndX = ox - ux * inset;
     float innerEndY = oy - uy * inset;
 
-    // 外线起止点（延伸）
     float outerStartX = innerStartX - ux * extend;
     float outerStartY = innerStartY - uy * extend;
     float outerEndX = innerEndX + ux * extend;
     float outerEndY = innerEndY + uy * extend;
 
-    // Warmup / 颜色平滑过渡
     float warmup = hasPower ? this.warmup : 1f;
     float powerLoss = 1f - warmup;
 
     Color outerColor = Tmp.c1.set(LINE_COLOR_OUTER)
-            .lerp(POWER_LOSS_COLOR, powerLoss);
+        .lerp(POWER_LOSS_COLOR, powerLoss);
     Color innerColor = Tmp.c2.set(LINE_COLOR_INNER)
-            .lerp(POWER_LOSS_INNER_COLOR, powerLoss);
+        .lerp(POWER_LOSS_INNER_COLOR, powerLoss);
 
     Draw.alpha(Renderer.bridgeOpacity);
 
-    // ----- 外层双线 -----
+    // ---- 外层双线 ----
     Draw.color(outerColor);
     Lines.stroke(1f);
     Lines.line(
@@ -320,12 +314,12 @@ public void draw() {
         outerEndY - ny * offset
     );
 
-    // ----- 内部主线 -----
+    // ---- 内部主线 ----
     Draw.color(innerColor);
     Lines.stroke(4f);
     Lines.line(innerStartX, innerStartY, innerEndX, innerEndY);
 
-    // ----- 两端端帽 -----
+    // ---- 端帽 ----
     Draw.color(outerColor);
     Lines.stroke(1f);
     Lines.line(
@@ -341,27 +335,28 @@ public void draw() {
         outerEndY - ny * offset
     );
 
-    // ============================================================
-    // 流动箭头 —— 仅在运输物品时绘制（moved == true）且电力正常
-    // ============================================================
+    // ---- 流动箭头（核心修改） ----
     int arrows = (int)(length / arrowSpacing);
-    // ★ 关键修改：只有当 moved 为 true 且 warmup > 0.01 时，箭头才可见
-    if (arrows > 0 && moved && warmup > 0.01f) {
+    if(arrows > 0){
+        // ★ 判断是否有物品正在运输（等待或已装车） ★
+        boolean hasItemsToTransport = items.total() > 0 && hadValidLink && enabled;
+
         float angle = Angles.angle(dx, dy);
         float rad = angle * Mathf.degRad;
+
         Draw.color(outerColor);
 
-        for (int a = 0; a < arrows; a++) {
+        for(int a = 0; a < arrows; a++){
             float px = tx + ux * (inset + a * arrowSpacing);
             float py = ty + uy * (inset + a * arrowSpacing);
 
-            // 时间因子（用 Time.time 产生脉动）
-            float timeFactor = Time.time / arrowTimeScl;
+            // ★ 有物品 → 时间因子随时间变化；无物品 → 固定为 0（箭头静止） ★
+            float timeFactor = hasItemsToTransport ? Time.time / arrowTimeScl : 0f;
             float alpha = Mathf.absin(a - timeFactor, arrowPeriod, 1f);
-            if (alpha <= 0.01f) continue;
+            if(alpha <= 0.01f) continue;
 
-            // 透明度结合 warmup 和全局透明度
-            float displayAlpha = alpha * warmup;
+            // ★ 透明度：运输中动态，无物品时固定为 0.3（完全不随时间更新） ★
+            float displayAlpha = hasItemsToTransport ? alpha * warmup : 0.3f;
             Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
 
             float size = 2.4f;
