@@ -283,7 +283,7 @@ public void draw(){
     float warmup = hasPower ? this.warmup : 1f;
 
     // 外线（灰色）
-    Draw.color(Pal.gray);
+    Draw.color(warmup < 0.5f ? Color.valueOf("#f49fa680") : Color.valueOf("#c0edf4"));
     Lines.stroke(1f);
     Lines.line(outerStartX + nx * offset, outerStartY + ny * offset,
                outerEndX + nx * offset, outerEndY + ny * offset);
@@ -291,12 +291,12 @@ public void draw(){
                outerEndX - nx * offset, outerEndY - ny * offset);
 
     // 内线（效率低时变色）
-    Draw.color(warmup < 0.5f ? Pal.ammo : Pal.accent);
+    Draw.color(warmup < 0.5f ? Color.valueOf("#ec767859") : Color.valueOf("#a1d7ecb3"));
     Lines.stroke(4f);
     Lines.line(innerStartX, innerStartY, innerEndX, innerEndY);
 
     // 端帽
-    Draw.color(Pal.gray);
+    Draw.color(Color.valueOf("#c0edf4"));
     Lines.stroke(1f);
     Lines.line(outerStartX + nx * offset, outerStartY + ny * offset,
                outerStartX - nx * offset, outerStartY - ny * offset);
@@ -304,7 +304,7 @@ public void draw(){
                outerEndX - nx * offset, outerEndY - ny * offset);
 
     // 流动箭头（完全照搬 JS 的 drawFlowArrowsWithInset）
-    Draw.color(Pal.accent);
+    Draw.color(Color.valueOf("#c0edf4"));
     int arrows = (int)(length / arrowSpacing);
     if(arrows <= 0) return;
     float angle = Angles.angle(dx, dy);
