@@ -383,7 +383,7 @@ public void draw(){
     // 流动箭头（未启用时静止）
     //========================================
 
-    int arrows = Math.max(0, (int)((length - inset - size) / arrowSpacing));
+    int arrows = (int)(Math.max(0, length - inset * 2 - 2.4f) / arrowSpacing);
 
     if(arrows > 0 && warmup > 0f){
         float angle = Angles.angle(dx, dy);
@@ -409,8 +409,6 @@ public void draw(){
 
             float displayAlpha = (warmup > 0f) ? alpha * warmup : alpha;
             Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
-
-            float size = 2.4f;
 
             Fill.tri(
                 px + Mathf.cos(rad) * size,
