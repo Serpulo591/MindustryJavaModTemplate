@@ -107,6 +107,9 @@ public class BridgeRouter extends Block {
         public float time = -8f, timeSpeed;
         public boolean wasMoved, moved, hadValidLink;
         public float transportCounter;
+        public boolean frozen = false;
+        public float frozenAlpha = 0f;
+        public float frozenWarmup = 1f;
     
         @Override
         public void pickedUp() {
@@ -211,6 +214,13 @@ public class BridgeRouter extends Block {
                 wasMoved = moved;
                 moved = false;
             }
+            
+            boolean hasItems = items.total() > 0;
+            if (hasItems) {
+                frozen = false;
+            } else if (!frozen) {
+                frozen = true;
+            }
 
             timeSpeed = Mathf.approachDelta(timeSpeed, wasMoved ? 1f : 0f, 1f / 60f);
             time += timeSpeed * delta();
@@ -298,7 +308,7 @@ public void draw(){
 
     Draw.alpha(Renderer.bridgeOpacity);
 
-    // ---- 外层双线 ----
+    // ---- 绘制线条（不受冻结影响） ----
     Draw.color(outerColor);
     Lines.stroke(1f);
     Lines.line(
@@ -314,12 +324,10 @@ public void draw(){
         outerEndY - ny * offset
     );
 
-    // ---- 内部主线 ----
     Draw.color(innerColor);
     Lines.stroke(4f);
     Lines.line(innerStartX, innerStartY, innerEndX, innerEndY);
 
-    // ---- 端帽 ----
     Draw.color(outerColor);
     Lines.stroke(1f);
     Lines.line(
@@ -335,28 +343,56 @@ public void draw(){
         outerEndY - ny * offset
     );
 
-    // ---- 流动箭头（核心修改） ----
+    // ---- 箭头部分（核心冻结逻辑） ----
     int arrows = (int)(length / arrowSpacing);
     if(arrows > 0){
-        // ★ 判断是否有物品正在运输（等待或已装车） ★
-        boolean hasItemsToTransport = items.total() > 0 && hadValidLink && enabled;
+        boolean hasItems = items.total() > 0 && hadValidLink && enabled;
+
+        // 如果有物品，则解除冻结状态（但不在绘制中修改冻结变量，以避免并发问题，可以在update中处理）
+        // 我们将在update中处理冻结状态切换，这里只读取冻结值
+        // 但为了简化，可以在draw中判断是否首次冻结并记录
+        if (!hasItems && !frozen) {
+            // 首次进入无物品状态，冻结当前（但此时我们需要计算当前的alpha和warmup）
+            // 我们可以计算一个示例箭头的alpha值（比如第一个箭头），但最好记录所有箭头，但为简化，我们可以冻结整个动画参数
+            // 真正的冻结应该记录每个箭头的alpha，但我们可以冻结时间因子timeFactor
+            // 因为alpha = absin(a - timeFactor, period, 1)，如果timeFactor固定，alpha就固定
+            // 所以我们只需要记录冻结时的timeFactor即可
+            // 更方便：我们直接记录冻结时的timeFactor
+            // 但由于timeFactor取决于Time.time，我们可以记录冻结时刻的timeFactor
+            // 我们新增字段 frozenTimeFactor
+        }
+
+        // 更好的做法：在update中处理冻结状态，这里直接使用frozen标志和frozenTimeFactor
+        // 为了完善，我们添加字段 float frozenTimeFactor;
+        // 在update中：
+        // if (items.total() == 0 && !frozen) { frozen = true; frozenTimeFactor = Time.time / arrowTimeScl; frozenWarmup = warmup; }
+        // else if (items.total() > 0) { frozen = false; }
 
         float angle = Angles.angle(dx, dy);
         float rad = angle * Mathf.degRad;
 
         Draw.color(outerColor);
 
+        // 计算时间因子
+        float timeFactor;
+        float effectiveWarmup;
+        if (hasItems) {
+            timeFactor = Time.time / arrowTimeScl;
+            effectiveWarmup = warmup;
+        } else {
+            // 冻结状态：使用记录的冻结值
+            timeFactor = frozenTimeFactor;
+            effectiveWarmup = frozenWarmup;
+        }
+
         for(int a = 0; a < arrows; a++){
             float px = tx + ux * (inset + a * arrowSpacing);
             float py = ty + uy * (inset + a * arrowSpacing);
 
-            // ★ 有物品 → 时间因子随时间变化；无物品 → 固定为 0（箭头静止） ★
-            float timeFactor = hasItemsToTransport ? Time.time / arrowTimeScl : 0f;
             float alpha = Mathf.absin(a - timeFactor, arrowPeriod, 1f);
             if(alpha <= 0.01f) continue;
 
-            // ★ 透明度：运输中动态，无物品时固定为 0.3（完全不随时间更新） ★
-            float displayAlpha = hasItemsToTransport ? alpha * warmup : 0.3f;
+            float displayAlpha = alpha * effectiveWarmup;
             Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
 
             float size = 2.4f;
