@@ -38,7 +38,6 @@ public class BridgeRouter extends Block {
     private static final Color POWER_LOSS_INNER_COLOR = Color.valueOf("#ec767859");
     private static final Color LINE_COLOR_OUTER = Color.valueOf("#c0edf4");
     private static final Color LINE_COLOR_INNER = Color.valueOf("#a1d7ecb3");
-    private float cachedAlpha = 0.3f;
     
     public @Nullable BridgeRouterBuild lastBuild;
 
@@ -253,95 +252,67 @@ public class BridgeRouter extends Block {
         }
         
 @Override
-public void draw(){
+public void draw() {
     super.draw();
 
     Tile other = world.tile(link);
-    if(!linkValid(tile, other)) return;
-    if(Mathf.zero(Renderer.bridgeOpacity)) return;
+    if (!linkValid(tile, other)) return;
+    if (Mathf.zero(Renderer.bridgeOpacity)) return;
 
     float tx = tile.drawx();
     float ty = tile.drawy();
-
     float ox = other.drawx();
     float oy = other.drawy();
 
     float dx = ox - tx;
     float dy = oy - ty;
     float length = Mathf.dst(dx, dy);
+    if (length <= 0.001f) return;
 
-    if(length <= 0.001f) return;
-
-    //单位方向
+    // 单位方向
     float ux = dx / length;
     float uy = dy / length;
-
-    //法线方向
+    // 法线方向
     float nx = -uy;
     float ny = ux;
 
-    //========================================
     // 基础参数
-    //========================================
-
     float offset = 2f;
     float inset = 4f;
     float extend = 1.5f;
 
-    //========================================
-    // 计算内线
-    //========================================
-
+    // 内线起止点
     float innerStartX = tx + ux * inset;
     float innerStartY = ty + uy * inset;
-
     float innerEndX = ox - ux * inset;
     float innerEndY = oy - uy * inset;
 
-    //========================================
-    // 计算外线
-    //========================================
-
+    // 外线起止点（延伸）
     float outerStartX = innerStartX - ux * extend;
     float outerStartY = innerStartY - uy * extend;
-
     float outerEndX = innerEndX + ux * extend;
     float outerEndY = innerEndY + uy * extend;
 
-    //========================================
     // Warmup / 颜色平滑过渡
-    //========================================
-
     float warmup = hasPower ? this.warmup : 1f;
-
-    // warmup:
-    // 1 -> 正常
-    // 0 -> 掉电
     float powerLoss = 1f - warmup;
 
     Color outerColor = Tmp.c1.set(LINE_COLOR_OUTER)
-        .lerp(POWER_LOSS_COLOR, powerLoss);
-
+            .lerp(POWER_LOSS_COLOR, powerLoss);
     Color innerColor = Tmp.c2.set(LINE_COLOR_INNER)
-        .lerp(POWER_LOSS_INNER_COLOR, powerLoss);
+            .lerp(POWER_LOSS_INNER_COLOR, powerLoss);
 
-    // 统一线条透明度（受全局控制）
     Draw.alpha(Renderer.bridgeOpacity);
 
-    //========================================
-    // 外层双线
-    //========================================
-
+    // ----- 外层双线 -----
     Draw.color(outerColor);
     Lines.stroke(1f);
-
     Lines.line(
         outerStartX + nx * offset,
         outerStartY + ny * offset,
         outerEndX + nx * offset,
         outerEndY + ny * offset
     );
-
     Lines.line(
         outerStartX - nx * offset,
         outerStartY - ny * offset,
@@ -349,36 +320,20 @@ public void draw(){
         outerEndY - ny * offset
     );
 
-    //========================================
-    // 内部主线
-    //========================================
-
+    // ----- 内部主线 -----
     Draw.color(innerColor);
     Lines.stroke(4f);
+    Lines.line(innerStartX, innerStartY, innerEndX, innerEndY);
 
-    Lines.line(
-        innerStartX,
-        innerStartY,
-        innerEndX,
-        innerEndY
-    );
-
-    //========================================
-    // 两端端帽
-    //========================================
-
+    // ----- 两端端帽 -----
     Draw.color(outerColor);
     Lines.stroke(1f);
-
-    //起点端帽
     Lines.line(
         outerStartX + nx * offset,
         outerStartY + ny * offset,
         outerStartX - nx * offset,
         outerStartY - ny * offset
     );
-
-    //终点端帽
     Lines.line(
         outerEndX + nx * offset,
         outerEndY + ny * offset,
@@ -386,47 +341,35 @@ public void draw(){
         outerEndY - ny * offset
     );
 
-    //========================================
-    // 流动箭头（未启用时静止）
-    //========================================
-
+    // ============================================================
+    // 流动箭头 —— 仅在运输物品时绘制（moved == true）且电力正常
+    // ============================================================
     int arrows = (int)(length / arrowSpacing);
-
-    if(arrows > 0){
+    // ★ 关键修改：只有当 moved 为 true 且 warmup > 0.01 时，箭头才可见
+    if (arrows > 0 && moved && warmup > 0.01f) {
         float angle = Angles.angle(dx, dy);
         float rad = angle * Mathf.degRad;
-
         Draw.color(outerColor);
 
-        for(int a = 0; a < arrows; a++){
-
+        for (int a = 0; a < arrows; a++) {
             float px = tx + ux * (inset + a * arrowSpacing);
             float py = ty + uy * (inset + a * arrowSpacing);
 
-            // ★ 当 warmup <= 0.01 时，固定时间，使箭头静止 ★
-            float timeFactor = (warmup > 0.01f) ? Time.time / arrowTimeScl : 0f;
+            // 时间因子（用 Time.time 产生脉动）
+            float timeFactor = Time.time / arrowTimeScl;
+            float alpha = Mathf.absin(a - timeFactor, arrowPeriod, 1f);
+            if (alpha <= 0.01f) continue;
 
-            float alpha = Mathf.absin(
-                a - timeFactor,
-                arrowPeriod,
-                1f
-            );
-
-            if(alpha <= 0.01f) continue;
-
-            // ★ 透明度：启用时用 warmup，未启用时固定为 0.3 ★
-            float displayAlpha = moved ? alpha * warmup : cachedAlpha;
+            // 透明度结合 warmup 和全局透明度
+            float displayAlpha = alpha * warmup;
             Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
 
             float size = 2.4f;
-
             Fill.tri(
                 px + Mathf.cos(rad) * size,
                 py + Mathf.sin(rad) * size,
-
                 px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
                 py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
-
                 px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
                 py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
             );
