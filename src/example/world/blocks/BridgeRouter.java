@@ -1,6 +1,6 @@
 package example.world.blocks;
 
-import mindustry.world.blocks.Block;
+import mindustry.world.blocks.storage.Block;
 import arc.func.*;
 import arc.graphics.*;
 import arc.graphics.g2d.*;
@@ -97,7 +97,7 @@ public class BridgeRouter extends Block {
         updateClipRadius((range + 0.5f) * tilesize);
     }
     
-    public class BridgeRouterBuild extends Build {
+    public class BridgeRouterBuild extends StorageBuild {
         public int link = -1;
         public IntSeq incoming = new IntSeq(false, 4);
         public float warmup;
