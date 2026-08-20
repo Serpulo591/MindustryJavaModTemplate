@@ -209,14 +209,11 @@ public class BridgeRouter extends StorageBlock {
             }
 
             timeSpeed = Mathf.approachDelta(timeSpeed, wasMoved ? 1f : 0f, 1f / 60f);
-
+            time += delta();
             time += timeSpeed * delta();
-
             checkIncoming();
-
             Tile other = world.tile(link);
             hadValidLink = linkValid(tile, other);
-
             if(!hadValidLink){
                 doDump();
                 warmup = 0f;
