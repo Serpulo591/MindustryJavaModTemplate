@@ -38,6 +38,7 @@ public class BridgeRouter extends Block {
     private static final Color POWER_LOSS_INNER_COLOR = Color.valueOf("#ec767859");
     private static final Color LINE_COLOR_OUTER = Color.valueOf("#c0edf4");
     private static final Color LINE_COLOR_INNER = Color.valueOf("#a1d7ecb3");
+    private float smoothArrowWarmup = 0f;
     
     public @Nullable BridgeRouterBuild lastBuild;
 
@@ -228,6 +229,8 @@ public class BridgeRouter extends Block {
                 }
 
                 warmup = Mathf.approachDelta(warmup, efficiency, 1f / 30f);
+                smoothArrowWarmup = Mathf.approachDelta(smoothArrowWarmup, warmup, 1f / 0.5f);
+                
                 updateTransport(other.build);
             }
         }
