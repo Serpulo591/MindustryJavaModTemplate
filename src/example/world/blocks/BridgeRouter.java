@@ -107,9 +107,6 @@ public class BridgeRouter extends Block {
         public float time = -8f, timeSpeed;
         public boolean wasMoved, moved, hadValidLink;
         public float transportCounter;
-        public boolean frozen = false;
-        public float frozenWarmup = 1f;
-        public float frozenTimeFactor = 0f;
     
         @Override
         public void pickedUp() {
@@ -214,13 +211,6 @@ public class BridgeRouter extends Block {
                 wasMoved = moved;
                 moved = false;
             }
-            
-            boolean hasItems = items.total() > 0;
-            if (hasItems) {
-                frozen = false;
-            } else if (!frozen) {
-                frozen = true;
-            }
 
             timeSpeed = Mathf.approachDelta(timeSpeed, wasMoved ? 1f : 0f, 1f / 60f);
             time += timeSpeed * delta();
@@ -271,81 +261,171 @@ public void draw(){
 
     float tx = tile.drawx();
     float ty = tile.drawy();
+
     float ox = other.drawx();
     float oy = other.drawy();
 
     float dx = ox - tx;
     float dy = oy - ty;
     float length = Mathf.dst(dx, dy);
+
     if(length <= 0.001f) return;
 
+    //单位方向
     float ux = dx / length;
     float uy = dy / length;
+
+    //法线方向
     float nx = -uy;
     float ny = ux;
+
+    //========================================
+    // 基础参数
+    //========================================
 
     float offset = 2f;
     float inset = 4f;
     float extend = 1.5f;
 
+    //========================================
+    // 计算内线
+    //========================================
+
     float innerStartX = tx + ux * inset;
     float innerStartY = ty + uy * inset;
+
     float innerEndX = ox - ux * inset;
     float innerEndY = oy - uy * inset;
 
+    //========================================
+    // 计算外线
+    //========================================
+
     float outerStartX = innerStartX - ux * extend;
     float outerStartY = innerStartY - uy * extend;
+
     float outerEndX = innerEndX + ux * extend;
     float outerEndY = innerEndY + uy * extend;
 
+    //========================================
+    // Warmup / 颜色平滑过渡
+    //========================================
+
     float warmup = hasPower ? this.warmup : 1f;
+
+    // warmup:
+    // 1 -> 正常
+    // 0 -> 掉电
     float powerLoss = 1f - warmup;
 
     Color outerColor = Tmp.c1.set(LINE_COLOR_OUTER)
         .lerp(POWER_LOSS_COLOR, powerLoss);
+
     Color innerColor = Tmp.c2.set(LINE_COLOR_INNER)
         .lerp(POWER_LOSS_INNER_COLOR, powerLoss);
 
+    // 统一线条透明度（受全局控制）
     Draw.alpha(Renderer.bridgeOpacity);
+
+    //========================================
+    // 外层双线
+    //========================================
 
     Draw.color(outerColor);
     Lines.stroke(1f);
-    Lines.line(outerStartX + nx * offset, outerStartY + ny * offset, outerEndX + nx * offset, outerEndY + ny * offset);
-    Lines.line(outerStartX - nx * offset, outerStartY - ny * offset, outerEndX - nx * offset, outerEndY - ny * offset);
+
+    Lines.line(
+        outerStartX + nx * offset,
+        outerStartY + ny * offset,
+        outerEndX + nx * offset,
+        outerEndY + ny * offset
+    );
+
+    Lines.line(
+        outerStartX - nx * offset,
+        outerStartY - ny * offset,
+        outerEndX - nx * offset,
+        outerEndY - ny * offset
+    );
+
+    //========================================
+    // 内部主线
+    //========================================
 
     Draw.color(innerColor);
     Lines.stroke(4f);
-    Lines.line(innerStartX, innerStartY, innerEndX, innerEndY);
+
+    Lines.line(
+        innerStartX,
+        innerStartY,
+        innerEndX,
+        innerEndY
+    );
+
+    //========================================
+    // 两端端帽
+    //========================================
 
     Draw.color(outerColor);
     Lines.stroke(1f);
-    Lines.line(outerStartX + nx * offset, outerStartY + ny * offset, outerStartX - nx * offset, outerStartY - ny * offset);
-    Lines.line(outerEndX + nx * offset, outerEndY + ny * offset, outerEndX - nx * offset, outerEndY - ny * offset);
+
+    //起点端帽
+    Lines.line(
+        outerStartX + nx * offset,
+        outerStartY + ny * offset,
+        outerStartX - nx * offset,
+        outerStartY - ny * offset
+    );
+
+    //终点端帽
+    Lines.line(
+        outerEndX + nx * offset,
+        outerEndY + ny * offset,
+        outerEndX - nx * offset,
+        outerEndY - ny * offset
+    );
+
+    //========================================
+    // 流动箭头（未启用时静止）
+    //========================================
 
     int arrows = (int)(length / arrowSpacing);
+
     if(arrows > 0){
-        float timeFactor = Time.time / 4f;
-        float effectiveWarmup = warmup;
         float angle = Angles.angle(dx, dy);
         float rad = angle * Mathf.degRad;
+
         Draw.color(outerColor);
-        float waveLength = 0.8f;
-        float waveSpeed = 1.5f;
+
         for(int a = 0; a < arrows; a++){
+
             float px = tx + ux * (inset + a * arrowSpacing);
             float py = ty + uy * (inset + a * arrowSpacing);
-            float posRatio = (inset + a * arrowSpacing) / length;
-            float sinVal = Mathf.sin(Mathf.PI2 * (posRatio / waveLength - timeFactor * waveSpeed));
-            float alpha = 0.2f + 0.8f * (0.5f + 0.5f * sinVal);
+
+            // ★ 当 warmup <= 0.01 时，固定时间，使箭头静止 ★
+            float timeFactor = (warmup > 0.01f) ? Time.time / arrowTimeScl : 0f;
+
+            float alpha = Mathf.absin(
+                a - timeFactor,
+                arrowPeriod,
+                1f
+            );
+
             if(alpha <= 0.01f) continue;
-            float displayAlpha = alpha * effectiveWarmup;
+
+            // ★ 透明度：启用时用 warmup，未启用时固定为 0.3 ★
+            float displayAlpha = (warmup > 0.01f) ? alpha * warmup : alpha;
             Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
+
             float size = 2.4f;
+
             Fill.tri(
                 px + Mathf.cos(rad) * size,
                 py + Mathf.sin(rad) * size,
+
                 px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
                 py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
+
                 px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
                 py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
             );
