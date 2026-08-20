@@ -38,6 +38,7 @@ public class BridgeRouter extends Block {
     private static final Color POWER_LOSS_INNER_COLOR = Color.valueOf("#ec767859");
     private static final Color LINE_COLOR_OUTER = Color.valueOf("#c0edf4");
     private static final Color LINE_COLOR_INNER = Color.valueOf("#a1d7ecb3");
+    private float cachedAlpha = 0.3f;
     
     public @Nullable BridgeRouterBuild lastBuild;
 
@@ -414,7 +415,7 @@ public void draw(){
             if(alpha <= 0.01f) continue;
 
             // ★ 透明度：启用时用 warmup，未启用时固定为 0.3 ★
-            float displayAlpha = (warmup > 0.01f) ? alpha * warmup : alpha;
+            float displayAlpha = moved ? alpha * warmup : cachedAlpha;
             Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
 
             float size = 2.4f;
