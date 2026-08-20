@@ -115,11 +115,13 @@ public class BridgeRouter extends Block {
             float tx = tile.drawx(), ty = tile.drawy();
             float ox = other.drawx(), oy = other.drawy();
             float alpha = Math.abs((linked ? 100 : 0) - (Time.time * 2f) % 100f) / 100f;
-            float x = Mathf.lerp(ox, tx, alpha);
-            float y = Mathf.lerp(oy, ty, alpha);
+            float arrowDx = otherLink.drawx() - x;
+            float arrowDy = otherLink.drawy() - y;
     
             Tile otherLink = linked ? other : tile;
-            int rel = (linked ? tile : other).absoluteRelativeTo(otherLink.x, otherLink.y);
+            float arrowDx = otherLink.drawx() - x;
+            float arrowDy = otherLink.drawy() - y;
+            float arrowAngle = Angles.angle(arrowDx, arrowDy);
     
             Draw.color(Pal.gray);
             Lines.stroke(2.5f);
@@ -134,7 +136,7 @@ public class BridgeRouter extends Block {
             Lines.square(ox, oy, 2f, 45f);
             Draw.mixcol(color);
             Draw.color();
-            Draw.rect("bridge-arrow", x, y, rel * 90);
+            Draw.rect("bridge-arrow", x, y, arrowAngle);
             Draw.mixcol();
         }
         
