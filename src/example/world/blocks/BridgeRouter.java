@@ -121,6 +121,7 @@ public class BridgeRouter extends Block {
     public class BridgeRouterBuild extends Building {
         // 主动连接列表（支持多个）
         public IntSeq links = new IntSeq();
+        public int nextLinkIndex = 0;
         // 被动连接列表（指向本建筑的其他桥）
         public IntSeq incoming = new IntSeq(false, 4);
         public float warmup;
@@ -253,24 +254,24 @@ public class BridgeRouter extends Block {
             checkIncoming();
 
             // 遍历所有主动连接，执行传输
-            hadValidLink = false;
-            for(int i = 0; i < links.size; i++){
-                Tile other = world.tile(links.get(i));
-                if(linkValid(tile, other)){
-                    hadValidLink = true;
-                    var targetBuild = (BridgeRouterBuild)other.build;
-                    // 将本建筑加入目标的 incoming（用于反向显示）
-                    if(!targetBuild.incoming.contains(tile.pos())){
-                        targetBuild.incoming.add(tile.pos());
-                    }
-                    warmup = Mathf.approachDelta(warmup, 1f, 1f / 30f);
-                    updateTransport(other.build);
-                }else{
-                    // 无效连接移除
-                    links.removeIndex(i);
-                    i--;
-                }
-            }
+hadValidLink = false;
+for(int i = 0; i < links.size; i++){
+    Tile other = world.tile(links.get(i));
+    if(linkValid(tile, other)){
+        hadValidLink = true;
+        var targetBuild = (BridgeRouterBuild)other.build;
+
+        if(!targetBuild.incoming.contains(tile.pos())){
+            targetBuild.incoming.add(tile.pos());
+        }
+
+        warmup = Mathf.approachDelta(warmup, 1f, 1f / 30f);
+        updateTransport(other.build);
+    }else{
+        links.removeIndex(i);
+        i--;
+    }
+}
 
             if(!hadValidLink){
                 doDump();
