@@ -283,20 +283,30 @@ public class BridgeRouter extends Block {
         }
 
         // ---------- 单次传输（对单个目标） ----------
-        public void updateTransport(Building other){
-            transportCounter += edelta();
-            while(transportCounter >= transportTime){
-                Item item = items.take();
-                if(item != null && other.acceptItem(this, item)){
-                    other.handleItem(this, item);
-                    moved = true;
-                }else if(item != null){
-                    items.add(item, 1);
-                    items.undoFlow(item);
-                }
-                transportCounter -= transportTime;
-            }
+public boolean updateTransport(Building other){
+    transportCounter += edelta();
+
+    while(transportCounter >= transportTime){
+
+        Item item = items.take();
+
+        if(item != null && other.acceptItem(this, item)){
+            other.handleItem(this, item);
+            moved = true;
+
+            transportCounter -= transportTime;
+            return true; // 成功发送
         }
+        else if(item != null){
+            items.add(item, 1);
+            items.undoFlow(item);
+        }
+
+        transportCounter -= transportTime;
+    }
+
+    return false;
+}
 
         // ---------- 绘制主连接（遍历所有连接） ----------
         @Override
@@ -485,6 +495,7 @@ public boolean acceptItem(Building source, Item item){
                 write.i(incoming.items[i]);
             }
             write.bool(wasMoved || moved);
+            write.i(nextLinkIndex);
         }
 
         @Override
