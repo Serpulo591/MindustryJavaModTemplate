@@ -49,7 +49,7 @@ public class BridgeRouter extends StorageBlock {
         hasItems = true;
         unloadable = false;
         group = BlockGroup.transportation;
-        noUpdateDisabled = false;
+        noUpdateDisabled = true;
         allowDiagonal = false;
         copyConfig = false;
         allowConfigInventory = false;
@@ -203,6 +203,7 @@ public class BridgeRouter extends StorageBlock {
         
         @Override
         public void updateTile(){
+            noSleep();
             if(timer(timerCheckMoved, 30f)){
                 wasMoved = moved;
                 moved = false;
