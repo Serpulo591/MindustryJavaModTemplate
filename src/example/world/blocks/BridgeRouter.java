@@ -49,7 +49,7 @@ public class BridgeRouter extends StorageBlock {
         hasItems = true;
         unloadable = false;
         group = BlockGroup.transportation;
-        noUpdateDisabled = true;
+        noUpdateDisabled = false;
         allowDiagonal = false;
         copyConfig = false;
         allowConfigInventory = false;
@@ -71,7 +71,7 @@ public class BridgeRouter extends StorageBlock {
     @Override
     public void drawPlace(int x, int y, int rotation, boolean valid){
         super.drawPlace(x, y, rotation, valid);
-        Drawf.dashCircle(x * tilesize, y * tilesize, range - tilesize, Pal.accent);
+        Drawf.dashCircle(x, y, range * tilesize, Pal.accent);
     }
     
     public boolean linkValid(Tile tile, Tile other){
