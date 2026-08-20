@@ -110,6 +110,7 @@ public class BridgeRouter extends Block {
         public boolean frozen = false;
         public float frozenAlpha = 0f;
         public float frozenWarmup = 1f;
+        public float frozenTimeFactor = 0f;
     
         @Override
         public void pickedUp() {
