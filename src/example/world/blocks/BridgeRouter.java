@@ -391,26 +391,45 @@ public void draw(){
 
     int arrows = (int)(length / arrowSpacing);
 
-if(arrows > 0 && warmup > 0.01f){
-    float angle = Angles.angle(dx, dy);
-    float rad = angle * Mathf.degRad;
-    Draw.color(outerColor);
-    for(int a = 0; a < arrows; a++){
-        float timeFactor = Time.time / arrowTimeScl;
-        float alpha = Mathf.absin(a - timeFactor, arrowPeriod, 1f);
-        if(alpha <= 0.01f) continue;
-        Draw.alpha(alpha * warmup * Renderer.bridgeOpacity);
-        float size = 2.4f;
-        Fill.tri(
-            px + Mathf.cos(rad) * size,
-            py + Mathf.sin(rad) * size,
-            px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
-            py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
-            px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
-            py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
-        );
+    if(arrows > 0 && warmup > 0f){
+        float angle = Angles.angle(dx, dy);
+        float rad = angle * Mathf.degRad;
+
+        Draw.color(outerColor);
+
+        for(int a = 0; a < arrows; a++){
+
+            float px = tx + ux * (inset + a * arrowSpacing);
+            float py = ty + uy * (inset + a * arrowSpacing);
+
+            // ★ 当 warmup <= 0.01 时，固定时间，使箭头静止 ★
+            float timeFactor = (warmup > 0f) ? Time.time / arrowTimeScl : 0f;
+
+            float alpha = Mathf.absin(
+                a - timeFactor,
+                arrowPeriod,
+                1f
+            );
+
+            if(alpha <= 0.01f) continue;
+
+            float displayAlpha = (warmup > 0f) ? alpha * warmup : alpha;
+            Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
+
+            float size = 2.4f;
+
+            Fill.tri(
+                px + Mathf.cos(rad) * size,
+                py + Mathf.sin(rad) * size,
+
+                px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
+                py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
+
+                px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
+                py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
+            );
+        }
     }
-}
 
     Draw.reset();
 }
