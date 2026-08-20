@@ -208,8 +208,7 @@ public class BridgeRouter extends StorageBlock {
                 moved = false;
             }
 
-            timeSpeed = Mathf.approachDelta(timeSpeed, wasMoved ? 1f : 0f, 1f / 60f);
-            time += delta();
+            timeSpeed = 1f;   // 强制永远以全速增长 time
             time += timeSpeed * delta();
             checkIncoming();
             Tile other = world.tile(link);
