@@ -53,19 +53,24 @@ public class BridgeRouter extends Block {
         ignoreResizeConfig = true;
         priority = TargetPriority.transport;
         delayLandingConfig = true;
-        config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> {
-            int pos = Point2.pack(i.x + tile.tileX(), i.y + tile.tileY());
+config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> {
+    int pos = Point2.pack(i.x + tile.tileX(), i.y + tile.tileY());
 
-            if(!tile.links.contains(pos) && tile.links.size < tile.maxLinks){
-                tile.links.add(pos);
-            }
-        });
+    if(tile.links.contains(pos)){
+        tile.links.removeValue(pos);
+    }else{
+        tile.links.add(pos);
+    }
+});
 
-        config(Integer.class, (BridgeRouterBuild tile, Integer i) -> {
-            if(!tile.links.contains(i) && tile.links.size < tile.maxLinks){
-                tile.links.add(i);
-            }
-        });
+
+config(Integer.class, (BridgeRouterBuild tile, Integer i) -> {
+    if(tile.links.contains(i)){
+        tile.links.removeValue(i);
+    }else{
+        tile.links.add(i);
+    }
+});
     }
     
     @Override
@@ -107,8 +112,7 @@ public class BridgeRouter extends Block {
     }
     
     public class BridgeRouterBuild extends Building {
-        public int maxLinks = 5;
-        public IntSeq links = new IntSeq();
+        public IntSeq links = new IntSeq(false, 4);
         public IntSeq incoming = new IntSeq(false, 4);
         public float warmup;
         public float time = -8f, timeSpeed;
@@ -117,7 +121,7 @@ public class BridgeRouter extends Block {
     
         @Override
         public void pickedUp() {
-            links.clear();
+            link = -1;
         }
     
         private void drawInput(Tile other) {
@@ -165,7 +169,7 @@ public class BridgeRouter extends Block {
                     Tile other = tile.nearby(dx, dy);
                     if(other == null) continue;
                     if(linkValid(tile, other)){
-                        if(incoming.contains(other.pos()) && !links.contains(other.pos())) continue;
+                        if(incoming.contains(other.pos()) && other.pos() != link) continue;
                         boolean linked = links.contains(other.pos());
                         Drawf.select(other.drawx(), other.drawy(),
                             other.block().size * tilesize / 2f + 2f + (linked ? 0f : Mathf.absin(Time.time, 4f, 1f)),
@@ -173,9 +177,13 @@ public class BridgeRouter extends Block {
                     }
                 }
             }
-            for(int i = 0; i < links.size; i++){
-                drawInput(world.tile(links.get(i)));
-            }
+links.each(pos -> {
+    Tile other = world.tile(pos);
+
+    if(linkValid(tile, other)){
+        drawInput(other);
+    }
+});
             incoming.each(pos -> drawInput(world.tile(pos)));
             Draw.reset();
         }
@@ -187,16 +195,16 @@ public class BridgeRouter extends Block {
                 return false;
             }
 
-            if(other instanceof BridgeRouterBuild b && b.links.contains(pos())){
-                b.links.removeValue(pos());
-                links.add(other.pos());
+            if(other instanceof BridgeRouterBuild b && b.link == pos()){
+                configure(other.pos());
+                other.configure(-1);
                 return false;
             }
 
             if(linkValid(tile, other.tile)){
-                if(links.contains(other.pos())){
-                    links.removeValue(other.pos());
-                } else if(links.size < maxLinks){
+                if(link == other.pos()){
+                    configure(-1);
+                }else{
                     configure(other.pos());
                 }
                 return false;
@@ -217,74 +225,96 @@ public class BridgeRouter extends Block {
             }
         }
         
-@Override
-public void updateTile(){
-    noSleep();
+        @Override
+        public void updateTile(){
+            noSleep();
+            if(timer(timerCheckMoved, 30f)){
+                wasMoved = moved;
+                moved = false;
+            }
 
-    if(timer(timerCheckMoved, 30f)){
-        wasMoved = moved;
-        moved = false;
-    }
+            timeSpeed = Mathf.approachDelta(timeSpeed, wasMoved ? 1f : 0f, 1f / 60f);
+            time += timeSpeed * delta();
+            checkIncoming();
+hadValidLink = false;
 
-    timeSpeed = Mathf.approachDelta(timeSpeed, wasMoved ? 1f : 0f, 1f / 60f);
-    time += timeSpeed * delta();
+links.each(pos -> {
 
-    checkIncoming();
+    Tile other = world.tile(pos);
 
-    hadValidLink = false;
-
-    for(int i = 0; i < links.size; i++){
-        Tile other = world.tile(links.get(i));
-
-        if(other == null || !linkValid(tile, other)) continue;
-
+    if(linkValid(tile, other)){
         hadValidLink = true;
-
-        var inc = ((BridgeRouterBuild)other.build).incoming;
-
-        if(!inc.contains(tile.pos())){
-            inc.add(tile.pos());
-        }
 
         updateTransport(other.build);
     }
 
-    if(!hadValidLink){
-        doDump();
-        warmup = 0f;
-    }else{
-        warmup = Mathf.approachDelta(warmup, efficiency, 1f / 30f);
-    }
-}
+});
+            if(!hadValidLink){
+                doDump();
+                warmup = 0f;
+            }else{
+                var inc = ((BridgeRouterBuild)other.build).incoming;
+                int pos = tile.pos();
+                if(!inc.contains(pos)){
+                    inc.add(pos);
+                }
+
+                warmup = Mathf.approachDelta(warmup, efficiency, 1f / 30f);
+                updateTransport(other.build);
+            }
+        }
         
         public void doDump(){
              dumpAccumulate();
         }
         
-        public void updateTransport(Building other){
-            transportCounter += edelta();
-            while(transportCounter >= transportTime){
-                Item item = items.take();
-                if(item != null && other.acceptItem(this, item)){
-                    other.handleItem(this, item);
-                    moved = true;
-                }else if(item != null){
-                    items.add(item, 1);
-                    items.undoFlow(item);
-                }
-                transportCounter -= transportTime;
+public void updateTransport(){
+
+    if(links.isEmpty()) return;
+
+    transportCounter += edelta();
+
+    while(transportCounter >= transportTime){
+
+        Item item = items.take();
+
+        if(item == null) break;
+
+
+        boolean sent = false;
+
+
+        for(int i = 0; i < links.size; i++){
+
+            Building other = world.tile(links.get(i)).build;
+
+            if(other != null && other.acceptItem(this,item)){
+
+                other.handleItem(this,item);
+
+                sent = true;
+
+                break;
             }
         }
+
+
+        if(!sent){
+            items.add(item,1);
+            items.undoFlow(item);
+        }
+
+
+        transportCounter -= transportTime;
+    }
+}
         
 @Override
 public void draw(){
     super.draw();
 
-    for(int i = 0; i < links.size; i++){
-        Tile other = world.tile(links.get(i));
-        if(other == null) continue;
-        drawInput(other);
-    }
+    Tile other = world.tile(link);
+    if(!linkValid(tile, other)) return;
     if(Mathf.zero(Renderer.bridgeOpacity)) return;
 
     float tx = tile.drawx();
@@ -491,7 +521,7 @@ float py = ty + uy * dist;
         }
         
         protected boolean linked(Building source){
-            return source instanceof BridgeRouterBuild && linkValid(source.tile, tile) && ((BridgeRouterBuild)source).links.contains(pos());
+            return source instanceof BridgeRouterBuild && linkValid(source.tile, tile) && ((BridgeRouterBuild)source).link == pos();
         }
         
         @Override
@@ -500,9 +530,7 @@ float py = ty + uy * dist;
         }
         
         protected boolean checkDump(Building to){
-            if(links.size == 0){
-                return true;
-            }
+            Tile other = world.tile(link);
             if(!linkValid(tile, other)){
                 Tile edge = Edges.getFacingEdge(to.tile, tile);
                 int i = relativeTo(edge.x, edge.y);
@@ -527,10 +555,14 @@ float py = ty + uy * dist;
             return hadValidLink && enabled;
         }
 
-        @Override
-        public Point2 config(){
-            return null;
-        }
+@Override
+public Point2 config(){
+
+    if(links.isEmpty()) return Point2.pack(0,0);
+
+    return Point2.unpack(links.first())
+        .sub(tile.x,tile.y);
+}
 
         @Override
         public byte version(){
@@ -540,9 +572,9 @@ float py = ty + uy * dist;
         @Override
         public void write(Writes write){
             super.write(write);
-            write.i(links.size);
+            write.b(links.size);
             for(int i = 0; i < links.size; i++){
-                write.i(links.get(i));
+                write.i(links.items[i]);
             }
             write.f(warmup);
             write.b(incoming.size);
@@ -557,11 +589,11 @@ float py = ty + uy * dist;
         @Override
         public void read(Reads read, byte revision){
             super.read(read, revision);
-            int amount = read.i();
-            links.clear();
-            for(int i = 0; i < amount; i++){
-                links.add(read.i());
-            }
+int amount = read.b();
+
+for(int i = 0; i < amount; i++){
+    links.add(read.i());
+}
             warmup = read.f();
             byte links = read.b();
             for(int i = 0; i < links; i++){
