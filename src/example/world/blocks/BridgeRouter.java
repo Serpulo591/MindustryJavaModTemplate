@@ -53,8 +53,19 @@ public class BridgeRouter extends Block {
         ignoreResizeConfig = true;
         priority = TargetPriority.transport;
         delayLandingConfig = true;
-        config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> tile.link = Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
-        config(Integer.class, (BridgeRouterBuild tile, Integer i) -> tile.link = i);
+        config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> {
+            int pos = Point2.pack(i.x + tile.tileX(), i.y + tile.tileY());
+
+            if(!tile.links.contains(pos) && tile.links.size < tile.maxLinks){
+                tile.links.add(pos);
+            }
+        });
+
+        config(Integer.class, (BridgeRouterBuild tile, Integer i) -> {
+            if(!tile.links.contains(i) && tile.links.size < tile.maxLinks){
+                tile.links.add(i);
+            }
+        });
     }
     
     @Override
@@ -96,7 +107,8 @@ public class BridgeRouter extends Block {
     }
     
     public class BridgeRouterBuild extends Building {
-        public int link = -1;
+        public int maxLinks = 5;
+        public IntSeq links = new IntSeq();
         public IntSeq incoming = new IntSeq(false, 4);
         public float warmup;
         public float time = -8f, timeSpeed;
@@ -105,12 +117,12 @@ public class BridgeRouter extends Block {
     
         @Override
         public void pickedUp() {
-            link = -1;
+            links.clear();
         }
     
         private void drawInput(Tile other) {
             if (!linkValid(tile, other, false)) return;
-            boolean linked = other.pos() == link;
+            boolean linked = links.contains(other.pos());
     
             Tmp.v2.trns(tile.angleTo(other), 2f);
             float tx = tile.drawx(), ty = tile.drawy();
@@ -153,16 +165,16 @@ public class BridgeRouter extends Block {
                     Tile other = tile.nearby(dx, dy);
                     if(other == null) continue;
                     if(linkValid(tile, other)){
-                        if(incoming.contains(other.pos()) && other.pos() != link) continue;
-                        boolean linked = other.pos() == link;
+                        if(incoming.contains(other.pos()) && !links.contains(other.pos())) continue;
+                        boolean linked = links.contains(other.pos());
                         Drawf.select(other.drawx(), other.drawy(),
                             other.block().size * tilesize / 2f + 2f + (linked ? 0f : Mathf.absin(Time.time, 4f, 1f)),
                             linked ? Pal.place : Pal.breakInvalid);
                     }
                 }
             }
-            if (linkValid(tile, world.tile(link))) {
-                drawInput(world.tile(link));
+            for(int i = 0; i < links.size; i++){
+                drawInput(world.tile(links.get(i)));
             }
             incoming.each(pos -> drawInput(world.tile(pos)));
             Draw.reset();
@@ -175,16 +187,16 @@ public class BridgeRouter extends Block {
                 return false;
             }
 
-            if(other instanceof BridgeRouterBuild b && b.link == pos()){
-                configure(other.pos());
-                other.configure(-1);
+            if(other instanceof BridgeRouterBuild b && b.links.contains(pos())){
+                b.links.removeValue(pos());
+                links.add(other.pos());
                 return false;
             }
 
             if(linkValid(tile, other.tile)){
-                if(link == other.pos()){
-                    configure(-1);
-                }else{
+                if(links.contains(other.pos())){
+                    links.removeValue(other.pos());
+                } else if(links.size < maxLinks){
                     configure(other.pos());
                 }
                 return false;
@@ -205,33 +217,45 @@ public class BridgeRouter extends Block {
             }
         }
         
-        @Override
-        public void updateTile(){
-            noSleep();
-            if(timer(timerCheckMoved, 30f)){
-                wasMoved = moved;
-                moved = false;
-            }
+@Override
+public void updateTile(){
+    noSleep();
 
-            timeSpeed = Mathf.approachDelta(timeSpeed, wasMoved ? 1f : 0f, 1f / 60f);
-            time += timeSpeed * delta();
-            checkIncoming();
-            Tile other = world.tile(link);
-            hadValidLink = linkValid(tile, other);
-            if(!hadValidLink){
-                doDump();
-                warmup = 0f;
-            }else{
-                var inc = ((BridgeRouterBuild)other.build).incoming;
-                int pos = tile.pos();
-                if(!inc.contains(pos)){
-                    inc.add(pos);
-                }
+    if(timer(timerCheckMoved, 30f)){
+        wasMoved = moved;
+        moved = false;
+    }
 
-                warmup = Mathf.approachDelta(warmup, efficiency, 1f / 30f);
-                updateTransport(other.build);
-            }
+    timeSpeed = Mathf.approachDelta(timeSpeed, wasMoved ? 1f : 0f, 1f / 60f);
+    time += timeSpeed * delta();
+
+    checkIncoming();
+
+    hadValidLink = false;
+
+    for(int i = 0; i < links.size; i++){
+        Tile other = world.tile(links.get(i));
+
+        if(other == null || !linkValid(tile, other)) continue;
+
+        hadValidLink = true;
+
+        var inc = ((BridgeRouterBuild)other.build).incoming;
+
+        if(!inc.contains(tile.pos())){
+            inc.add(tile.pos());
         }
+
+        updateTransport(other.build);
+    }
+
+    if(!hadValidLink){
+        doDump();
+        warmup = 0f;
+    }else{
+        warmup = Mathf.approachDelta(warmup, efficiency, 1f / 30f);
+    }
+}
         
         public void doDump(){
              dumpAccumulate();
@@ -256,8 +280,11 @@ public class BridgeRouter extends Block {
 public void draw(){
     super.draw();
 
-    Tile other = world.tile(link);
-    if(!linkValid(tile, other)) return;
+    for(int i = 0; i < links.size; i++){
+        Tile other = world.tile(links.get(i));
+        if(other == null) continue;
+        drawInput(other);
+    }
     if(Mathf.zero(Renderer.bridgeOpacity)) return;
 
     float tx = tile.drawx();
@@ -447,7 +474,7 @@ float py = ty + uy * dist;
         
         @Override
         public boolean acceptItem(Building source, Item item){
-            return hasItems && team == source.team && items.total() < itemCapacity && checkAccept(source, world.tile(link));
+            return hasItems && team == source.team && items.total() < itemCapacity && return hasItems && team == source.team && items.total() < itemCapacity;;
         }
         
         protected boolean checkAccept(Building source, Tile link){
@@ -464,7 +491,7 @@ float py = ty + uy * dist;
         }
         
         protected boolean linked(Building source){
-            return source instanceof BridgeRouterBuild && linkValid(source.tile, tile) && ((BridgeRouterBuild)source).link == pos();
+            return source instanceof BridgeRouterBuild && linkValid(source.tile, tile) && ((BridgeRouterBuild)source).links.contains(pos());
         }
         
         @Override
@@ -473,7 +500,9 @@ float py = ty + uy * dist;
         }
         
         protected boolean checkDump(Building to){
-            Tile other = world.tile(link);
+            if(links.size == 0){
+                return true;
+            }
             if(!linkValid(tile, other)){
                 Tile edge = Edges.getFacingEdge(to.tile, tile);
                 int i = relativeTo(edge.x, edge.y);
@@ -500,7 +529,7 @@ float py = ty + uy * dist;
 
         @Override
         public Point2 config(){
-            return Point2.unpack(link).sub(tile.x, tile.y);
+            return null;
         }
 
         @Override
@@ -511,7 +540,10 @@ float py = ty + uy * dist;
         @Override
         public void write(Writes write){
             super.write(write);
-            write.i(link);
+            write.i(links.size);
+            for(int i = 0; i < links.size; i++){
+                write.i(links.get(i));
+            }
             write.f(warmup);
             write.b(incoming.size);
 
@@ -525,7 +557,11 @@ float py = ty + uy * dist;
         @Override
         public void read(Reads read, byte revision){
             super.read(read, revision);
-            link = read.i();
+            int amount = read.i();
+            links.clear();
+            for(int i = 0; i < amount; i++){
+                links.add(read.i());
+            }
             warmup = read.f();
             byte links = read.b();
             for(int i = 0; i < links; i++){
