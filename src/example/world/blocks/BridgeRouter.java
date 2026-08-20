@@ -474,7 +474,7 @@ float py = ty + uy * dist;
         
         @Override
         public boolean acceptItem(Building source, Item item){
-            return hasItems && team == source.team && items.total() < itemCapacity && return hasItems && team == source.team && items.total() < itemCapacity;;
+            return hasItems && team == source.team && items.total() < itemCapacity;
         }
         
         protected boolean checkAccept(Building source, Tile link){
