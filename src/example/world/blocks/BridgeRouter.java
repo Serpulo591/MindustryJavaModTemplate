@@ -115,8 +115,8 @@ public class BridgeRouter extends Block {
             float tx = tile.drawx(), ty = tile.drawy();
             float ox = other.drawx(), oy = other.drawy();
             float alpha = Math.abs((linked ? 100 : 0) - (Time.time * 2f) % 100f) / 100f;
-            float arrowDx = otherLink.drawx() - x;
-            float arrowDy = otherLink.drawy() - y;
+            float x = Mathf.lerp(ox, tx, alpha);
+            float y = Mathf.lerp(oy, ty, alpha);
     
             Tile otherLink = linked ? other : tile;
             float arrowDx = otherLink.drawx() - x;
