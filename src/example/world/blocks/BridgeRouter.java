@@ -248,6 +248,7 @@ public class BridgeRouter extends Block {
 @Override
 public void draw(){
     super.draw();
+    Draw.z(Layer.blockOver + 5);
 
     Tile other = world.tile(link);
     if(!linkValid(tile, other)) return;
