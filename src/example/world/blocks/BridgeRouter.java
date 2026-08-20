@@ -320,7 +320,7 @@ public void draw(){
 
     // 统一线条透明度（受全局控制）
     Draw.alpha(Renderer.bridgeOpacity);
-    Draw.z(Layer.blockOver);
+    Draw.z(Layer.blockOver + 0.03);
 
     //========================================
     // 外层双线
@@ -341,20 +341,6 @@ public void draw(){
         outerStartY - ny * offset,
         outerEndX - nx * offset,
         outerEndY - ny * offset
-    );
-
-    //========================================
-    // 内部主线
-    //========================================
-
-    Draw.color(innerColor);
-    Lines.stroke(4f);
-
-    Lines.line(
-        innerStartX,
-        innerStartY,
-        innerEndX,
-        innerEndY
     );
 
     //========================================
@@ -381,10 +367,25 @@ public void draw(){
     );
 
     //========================================
+    // 内部主线
+    //========================================
+
+    Draw.z(Layer.blockOver + 0.02);
+    Draw.color(innerColor);
+    Lines.stroke(4f);
+
+    Lines.line(
+        innerStartX,
+        innerStartY,
+        innerEndX,
+        innerEndY
+    );
+
+    //========================================
     // 流动箭头（未启用时静止）
     //========================================
 
-    Draw.z(Layer.blockOver);
+    Draw.z(Layer.blockOver + 0.01);
     float arrowLength = length - inset * 2f;
     int arrows = (int)(arrowLength / arrowSpacing);
 
