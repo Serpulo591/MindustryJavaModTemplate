@@ -383,7 +383,7 @@ public void draw(){
     // 流动箭头（未启用时静止）
     //========================================
 
-    int arrows = (int)(length / arrowSpacing);
+    int arrows = Math.max(0, (int)((length - inset - size) / arrowSpacing));
 
     if(arrows > 0 && warmup > 0f){
         float angle = Angles.angle(dx, dy);
