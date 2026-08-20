@@ -247,70 +247,85 @@ public class BridgeRouter extends Block {
             }
         }
         
-        @Override
-        public void draw(){
-            super.draw();
-        
-            Tile other = world.tile(link);
-            if(!linkValid(tile, other)) return;
-            if(Mathf.zero(Renderer.bridgeOpacity)) return;
-        
-            float tx = tile.drawx(), ty = tile.drawy();
-            float ox = other.drawx(), oy = other.drawy();
-        
-            float dx = ox - tx, dy = oy - ty;
-            float len = Mathf.dst(dx, dy);
-            if(len < 1f) return;
-            float nx = dx / len, ny = dy / len;
-        
-            float px = -ny, py = nx;
-        
-            float inset = tilesize / 2f;
-            float startX = tx + nx * inset, startY = ty + ny * inset;
-            float endX = ox - nx * inset, endY = oy - ny * inset;
-        
-            // ---- 1. 绘制两条平行外线 ----
-            float offset = 2.5f;
-            Draw.color(Pal.gray);
-            Lines.stroke(2.5f);
-            Lines.line(startX + px * offset, startY + py * offset,
-                       endX + px * offset, endY + py * offset);
-            Lines.line(startX - px * offset, startY - py * offset,
-                       endX - px * offset, endY - py * offset);
-        
-            // ---- 2. 绘制内线（效率低时变色） ----
-            float warmup = hasPower ? this.warmup : 1f;
-            Draw.color(warmup < 0.5f ? Pal.ammo : Pal.accent);
-            Lines.stroke(1f);
-            Lines.line(startX, startY, endX, endY);
-        
-            // ---- 3. 绘制两端端帽 ----
-            Draw.color(Pal.accent);
-            Lines.stroke(2f);
-            float capLen = 4f;
-            Lines.line(startX + px * capLen, startY + py * capLen,
-                       startX - px * capLen, startY - py * capLen);
-            Lines.line(endX + px * capLen, endY + py * capLen,
-                       endX - px * capLen, endY - py * capLen);
-        
-            // ---- 4. 绘制流动箭头 ----
-            for (int a = 0; a < arrows; a++) {
-                float px = startX + normX * a * arrowSpacing;
-                float py = startY + normY * a * arrowSpacing;
-                float alpha = Mathf.absin(a - Time.time / arrowTimeScl, arrowPeriod, 1f);
-                if (alpha <= 0.01f) continue;
-                float finalAlpha = alpha * opacity;
+@Override
+public void draw(){
+    super.draw();
 
-                Draw.color(color, finalAlpha);
-                Fill.tri(
-                    px + Mathf.cos(rad) * arrowSize, py + Mathf.sin(rad) * arrowSize,
-                    px + Mathf.cos(rad + Mathf.PI / 2f) * arrowSize, py + Mathf.sin(rad + Mathf.PI / 2f) * arrowSize,
-                    px + Mathf.cos(rad - Mathf.PI / 2f) * arrowSize, py + Mathf.sin(rad - Mathf.PI / 2f) * arrowSize
-                );
-            }
+    Tile other = world.tile(link);
+    if(!linkValid(tile, other)) return;
+    if(Mathf.zero(Renderer.bridgeOpacity)) return;
 
-            Draw.reset();
-        }
+    float tx = tile.drawx(), ty = tile.drawy();
+    float ox = other.drawx(), oy = other.drawy();
+
+    float dx = ox - tx, dy = oy - ty;
+    float length = Mathf.dst(dx, dy);
+    if(length == 0) return;
+
+    float ux = dx / length;
+    float uy = dy / length;
+    float nx = -uy;
+    float ny = ux;
+    float offset = 2f;
+
+    float inset = 4f;
+    float innerStartX = tx + ux * inset;
+    float innerStartY = ty + uy * inset;
+    float innerEndX = ox - ux * inset;
+    float innerEndY = oy - uy * inset;
+
+    float extend = 1.5f;
+    float outerStartX = innerStartX - ux * extend;
+    float outerStartY = innerStartY - uy * extend;
+    float outerEndX = innerEndX + ux * extend;
+    float outerEndY = innerEndY + uy * extend;
+
+    float warmup = hasPower ? this.warmup : 1f;
+
+    // 外线（灰色）
+    Draw.color(Pal.gray);
+    Lines.stroke(1f);
+    Lines.line(outerStartX + nx * offset, outerStartY + ny * offset,
+               outerEndX + nx * offset, outerEndY + ny * offset);
+    Lines.line(outerStartX - nx * offset, outerStartY - ny * offset,
+               outerEndX - nx * offset, outerEndY - ny * offset);
+
+    // 内线（效率低时变色）
+    Draw.color(warmup < 0.5f ? Pal.ammo : Pal.accent);
+    Lines.stroke(4f);
+    Lines.line(innerStartX, innerStartY, innerEndX, innerEndY);
+
+    // 端帽
+    Draw.color(Pal.gray);
+    Lines.stroke(1f);
+    Lines.line(outerStartX + nx * offset, outerStartY + ny * offset,
+               outerStartX - nx * offset, outerStartY - ny * offset);
+    Lines.line(outerEndX + nx * offset, outerEndY + ny * offset,
+               outerEndX - nx * offset, outerEndY - ny * offset);
+
+    // 流动箭头（完全照搬 JS 的 drawFlowArrowsWithInset）
+    Draw.color(Pal.accent);
+    int arrows = (int)(length / arrowSpacing);
+    if(arrows <= 0) return;
+    float angle = Angles.angle(dx, dy);
+    for(int a = 0; a < arrows; a++){
+        float px = tx + ux * (inset + a * arrowSpacing);
+        float py = ty + uy * (inset + a * arrowSpacing);
+        float timeScl = 12.6f;
+        float alpha = Mathf.absin(a - Time.time / timeScl, arrowPeriod, 1f);
+        if(alpha <= 0.01) continue;
+        float finalAlpha = alpha;
+        Draw.alpha(finalAlpha * warmup * Renderer.bridgeOpacity);
+        float rad = angle * Mathf.degRad;
+        Fill.tri(
+            px + Mathf.cos(rad) * 2.4f, py + Mathf.sin(rad) * 2.4f,
+            px + Mathf.cos(rad + Mathf.PI * 0.5f) * 2.4f, py + Mathf.sin(rad + Mathf.PI * 0.5f) * 2.4f,
+            px + Mathf.cos(rad - Mathf.PI * 0.5f) * 2.4f, py + Mathf.sin(rad - Mathf.PI * 0.5f) * 2.4f
+        );
+    }
+
+    Draw.reset();
+}
         
         @Override
         public boolean acceptItem(Building source, Item item){
