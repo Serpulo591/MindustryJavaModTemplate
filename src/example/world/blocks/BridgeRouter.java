@@ -229,7 +229,7 @@ public class BridgeRouter extends Block {
                 }
 
                 warmup = Mathf.approachDelta(warmup, efficiency, 1f / 30f);
-                smoothArrowWarmup = Mathf.approachDelta(smoothArrowWarmup, warmup, 1f / 0.5f);
+                smoothArrowWarmup = Mathf.approachDelta(smoothArrowWarmup, warmup, -1f / 0.5f);
                 
                 updateTransport(other.build);
             }
