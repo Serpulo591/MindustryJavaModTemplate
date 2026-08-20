@@ -419,17 +419,17 @@ float py = ty + uy * dist;
             float displayAlpha = (warmup > 0f) ? alpha * warmup : alpha;
             Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
 
-            float size = 2.4f;
+            float size = 1.5f;
 
             Fill.tri(
                 px + Mathf.cos(rad) * size,
                 py + Mathf.sin(rad) * size,
 
-                px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
-                py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
+                px + Mathf.cos(rad + Mathf.PI * 0.75f) * size,
+                py + Mathf.sin(rad + Mathf.PI * 0.75f) * size,
 
-                px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
-                py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
+                px + Mathf.cos(rad - Mathf.PI * 0.75f) * size,
+                py + Mathf.sin(rad - Mathf.PI * 0.75f) * size
             );
         }
     }
