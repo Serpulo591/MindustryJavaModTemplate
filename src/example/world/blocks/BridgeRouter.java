@@ -1,6 +1,6 @@
 package example.world.blocks;
 
-import mindustry.world.blocks.storage.Block;
+import mindustry.world.blocks.storage.StorageBlock;
 import arc.func.*;
 import arc.graphics.*;
 import arc.graphics.g2d.*;
@@ -25,7 +25,7 @@ import mindustry.world.meta.*;
 
 import static mindustry.Vars.*;
 
-public class BridgeRouter extends Block {
+public class BridgeRouter extends StorageBlock {
     public final int timerCheckMoved = timers ++;
     public int range = 5;
     public float transportTime = 1f;
