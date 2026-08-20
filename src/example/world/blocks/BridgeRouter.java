@@ -31,9 +31,9 @@ public class BridgeRouter extends Block {
     public float arrowSpacing = 4f, arrowPeriod = 0.4f;
     public float arrowTimeScl = 6.2f;
     private static final Color POWER_LOSS_COLOR = Color.valueOf("#f49fa680");
-    private static final Color POWER_LOSS_INNER_COLOR = Color.valueOf("#ec767838");
+    private static final Color POWER_LOSS_INNER_COLOR = Color.valueOf("#ec767803");
     private static final Color LINE_COLOR_OUTER = Color.valueOf("#c0edf4");
-    private static final Color LINE_COLOR_INNER = Color.valueOf("#a1d7ec80");
+    private static final Color LINE_COLOR_INNER = Color.valueOf("#a1d7ec03");
 
     public BridgeRouter(String name){
         super(name);
