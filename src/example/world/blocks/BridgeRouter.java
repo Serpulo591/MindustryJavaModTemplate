@@ -38,7 +38,6 @@ public class BridgeRouter extends Block {
     private static final Color POWER_LOSS_INNER_COLOR = Color.valueOf("#ec767859");
     private static final Color LINE_COLOR_OUTER = Color.valueOf("#c0edf4");
     private static final Color LINE_COLOR_INNER = Color.valueOf("#a1d7ecb3");
-    private float smoothArrowWarmup = 0f;
     
     public @Nullable BridgeRouterBuild lastBuild;
 
@@ -229,8 +228,6 @@ public class BridgeRouter extends Block {
                 }
 
                 warmup = Mathf.approachDelta(warmup, efficiency, 1f / 30f);
-                smoothArrowWarmup = Mathf.approachDelta(smoothArrowWarmup, warmup, -1f / 0.5f);
-                
                 updateTransport(other.build);
             }
         }
@@ -394,46 +391,26 @@ public void draw(){
 
     int arrows = (int)(length / arrowSpacing);
 
-    if(arrows > 0){
-        float angle = Angles.angle(dx, dy);
-        float rad = angle * Mathf.degRad;
-
-        Draw.color(outerColor);
-
-        for(int a = 0; a < arrows; a++){
-
-            float px = tx + ux * (inset + a * arrowSpacing);
-            float py = ty + uy * (inset + a * arrowSpacing);
-
-            // ★ 当 warmup <= 0.01 时，固定时间，使箭头静止 ★
-            float timeFactor = (warmup > 0.01f) ? Time.time / arrowTimeScl : 0f;
-
-            float alpha = Mathf.absin(
-                a - timeFactor,
-                arrowPeriod,
-                1f
-            );
-
-            if(alpha <= 0.01f) continue;
-
-            // ★ 透明度：启用时用 warmup，未启用时固定为 0.3 ★
-            float displayAlpha = (warmup > 0.01f) ? alpha * warmup : alpha;
-            Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
-
-            float size = 2.4f;
-
-            Fill.tri(
-                px + Mathf.cos(rad) * size,
-                py + Mathf.sin(rad) * size,
-
-                px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
-                py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
-
-                px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
-                py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
-            );
-        }
+if(arrows > 0 && warmup > 0.01f){
+    float angle = Angles.angle(dx, dy);
+    float rad = angle * Mathf.degRad;
+    Draw.color(outerColor);
+    for(int a = 0; a < arrows; a++){
+        float timeFactor = Time.time / arrowTimeScl;
+        float alpha = Mathf.absin(a - timeFactor, arrowPeriod, 1f);
+        if(alpha <= 0.01f) continue;
+        Draw.alpha(alpha * warmup * Renderer.bridgeOpacity);
+        float size = 2.4f;
+        Fill.tri(
+            px + Mathf.cos(rad) * size,
+            py + Mathf.sin(rad) * size,
+            px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
+            py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
+            px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
+            py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
+        );
     }
+}
 
     Draw.reset();
 }
