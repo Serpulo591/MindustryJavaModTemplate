@@ -120,7 +120,7 @@ public class BridgeRouter extends StorageBlock {
         super.onRemoved();
         activeBridges.remove(this);
     }
-    
+
     public class BridgeRouterBuild extends StorageBuild {
         public int link = -1;
         public IntSeq incoming = new IntSeq(false, 4);
@@ -273,6 +273,10 @@ public class BridgeRouter extends StorageBlock {
         
         @Override
         public void draw(){
+            super.draw();
+        }
+
+        public void drawBridge(){
             super.draw();
         
             Tile other = world.tile(link);
