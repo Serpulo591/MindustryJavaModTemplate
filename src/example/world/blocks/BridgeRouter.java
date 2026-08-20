@@ -12,9 +12,6 @@ import arc.math.geom.*;
 import arc.struct.*;
 import arc.util.*;
 import arc.util.io.*;
-import arc.Events;
-import arc.util.Time;
-import mindustry.game.EventType.Trigger;
 import mindustry.core.*;
 import mindustry.entities.*;
 import mindustry.entities.units.*;
@@ -38,8 +35,9 @@ public class BridgeRouter extends StorageBlock {
     public float arrowSpacing = 4f, arrowOffset = 2f, arrowPeriod = 0.4f;
     public float arrowTimeScl = 6.2f;
     public float bridgeWidth = 6.5f;
-    public static final Seq<BridgeRouterBuild> activeBridges = new Seq<>();  
+    
     public @Nullable BridgeRouterBuild lastBuild;
+
     public BridgeRouter(String name){
         super(name);
         update = true;
@@ -97,30 +95,8 @@ public class BridgeRouter extends StorageBlock {
     public void init(){
         super.init();
         updateClipRadius((range + 0.5f) * tilesize);
-        Events.run(Trigger.draw, () -> {
-            float prevZ = Draw.z();
-            Draw.z(Layer.block + 1);
-            for (BridgeRouterBuild b : activeBridges) {
-                if (b.isValid()) {
-                    b.drawBridge();
-                }
-            }
-            Draw.z(prevZ);
-        });
     }
     
-    @Override
-    public void created(){
-        super.created();
-        activeBridges.add(this);
-    }
-
-    @Override
-    public void onRemoved(){
-        super.onRemoved();
-        activeBridges.remove(this);
-    }
-
     public class BridgeRouterBuild extends StorageBuild {
         public int link = -1;
         public IntSeq incoming = new IntSeq(false, 4);
@@ -271,70 +247,61 @@ public class BridgeRouter extends StorageBlock {
             }
         }
         
-        @Override
-        public void draw(){
-            super.draw();
-        }
+@Override
+public void draw(){
+    super.draw();
 
-        public void drawBridge(){
-            super.draw();
-        
-            Tile other = world.tile(link);
-            if(!linkValid(tile, other)) return;
-            if(Mathf.zero(Renderer.bridgeOpacity)) return;
-        
-            float tx = tile.drawx(), ty = tile.drawy();
-            float ox = other.drawx(), oy = other.drawy();
-        
-            float dx = ox - tx, dy = oy - ty;
-            float len = Mathf.dst(dx, dy);
-            if(len < 1f) return;
-            float nx = dx / len, ny = dy / len;
-        
-            float px = -ny, py = nx;
-        
-            float inset = tilesize / 2f;
-            float startX = tx + nx * inset, startY = ty + ny * inset;
-            float endX = ox - nx * inset, endY = oy - ny * inset;
-        
-            // ---- 1. 绘制两条平行外线 ----
-            float offset = 2.5f;
-            Draw.color(Pal.gray);
-            Lines.stroke(2.5f);
-            Lines.line(startX + px * offset, startY + py * offset,
-                       endX + px * offset, endY + py * offset);
-            Lines.line(startX - px * offset, startY - py * offset,
-                       endX - px * offset, endY - py * offset);
-        
-            // ---- 2. 绘制内线（效率低时变色） ----
-            float warmup = hasPower ? this.warmup : 1f;
-            Draw.color(warmup < 0.5f ? Pal.ammo : Pal.accent);
-            Lines.stroke(1f);
-            Lines.line(startX, startY, endX, endY);
-        
-            // ---- 3. 绘制两端端帽 ----
-            Draw.color(Pal.accent);
-            Lines.stroke(2f);
-            float capLen = 4f;
-            Lines.line(startX + px * capLen, startY + py * capLen,
-                       startX - px * capLen, startY - py * capLen);
-            Lines.line(endX + px * capLen, endY + py * capLen,
-                       endX - px * capLen, endY - py * capLen);
-        
-            // ---- 4. 绘制流动箭头 ----
-            Draw.color(Pal.accent);
-            int arrows = Math.max(1, (int)(len / arrowSpacing));
-            for(int i = 0; i < arrows; i++){
-                float progress = (i / (float)arrows + Time.time / arrowTimeScl) % 1f;
-                float alpha = Mathf.absin(i - Time.time / arrowTimeScl, arrowPeriod, 1f);
-                Draw.alpha(alpha * warmup * Renderer.bridgeOpacity);
-                float ax = Mathf.lerp(startX, endX, progress);
-                float ay = Mathf.lerp(startY, endY, progress);
-                Fill.circle(ax, ay, 2f);
-            }
-        
-            Draw.reset();
-        }
+    Tile other = world.tile(link);
+    if(!linkValid(tile, other)) return;
+    if(Mathf.zero(Renderer.bridgeOpacity)) return;
+
+    float tx = tile.drawx(), ty = tile.drawy();
+    float ox = other.drawx(), oy = other.drawy();
+
+    float dx = ox - tx, dy = oy - ty;
+    float len = Mathf.dst(dx, dy);
+    if(len < 1f) return;
+    float nx = dx / len, ny = dy / len;
+    float px = -ny, py = nx;
+    float inset = tilesize / 2f;
+    float startX = tx + nx * inset, startY = ty + ny * inset;
+    float endX = ox - nx * inset, endY = oy - ny * inset;
+
+    // 1. 外线（灰色固定）
+    float offset = 2.5f;
+    Draw.color(Pal.gray);
+    Lines.stroke(2.5f);
+    Lines.line(startX + px * offset, startY + py * offset, endX + px * offset, endY + py * offset);
+    Lines.line(startX - px * offset, startY - py * offset, endX - px * offset, endY - py * offset);
+
+    // 2. 内线（用全局时间让颜色循环变化，不用 warmup）
+    float hue = Mathf.absin(Time.time / 60f, 6f, 1f); // 颜色循环
+    Draw.color(Color.valueOf("ffffff").lerp(Pal.accent, Mathf.max(hue, 0.5f)));
+    Lines.stroke(1f);
+    Lines.line(startX, startY, endX, endY);
+
+    // 3. 端帽（用全局时间脉动大小）
+    Draw.color(Pal.accent);
+    Lines.stroke(2f);
+    float capLen = 4f + Mathf.absin(Time.time / 30f, 2f, 2f);
+    Lines.line(startX + px * capLen, startY + py * capLen, startX - px * capLen, startY - py * capLen);
+    Lines.line(endX + px * capLen, endY + py * capLen, endX - px * capLen, endY - py * capLen);
+
+    // 4. 流动箭头（全局时间驱动，永远流动）
+    Draw.color(Pal.accent);
+    int arrows = Math.max(1, (int)(len / arrowSpacing));
+    float globalTime = Time.time / 60f;
+    for(int i = 0; i < arrows; i++){
+        float progress = (i / (float)arrows + globalTime / 8f) % 1f;
+        float alpha = Mathf.absin(progress * arrows - globalTime, 0.5f, 1f);
+        Draw.alpha(alpha * 0.8f);
+        float ax = Mathf.lerp(startX, endX, progress);
+        float ay = Mathf.lerp(startY, endY, progress);
+        Fill.circle(ax, ay, 3f);
+    }
+
+    Draw.reset();
+}
         
         @Override
         public boolean acceptItem(Building source, Item item){
