@@ -30,6 +30,8 @@ public class BridgeRouter extends Block {
     public float transportTime = 1f;
     public float arrowSpacing = 4f, arrowPeriod = 0.4f;
     public float arrowTimeScl = 6.2f;
+    public int maxLinks = 4; // 最大连接数
+
     private static final Color POWER_LOSS_COLOR = Color.valueOf("#f49fa680");
     private static final Color POWER_LOSS_INNER_COLOR = Color.valueOf("#ec767838");
     private static final Color LINE_COLOR_OUTER = Color.valueOf("#c0edf4");
@@ -53,29 +55,11 @@ public class BridgeRouter extends Block {
         ignoreResizeConfig = true;
         priority = TargetPriority.transport;
         delayLandingConfig = true;
-
-        // 单连接配置（兼容旧版）
-        config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> {
-            tile.links.clear();
-            tile.links.add(Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
-        });
-        config(Integer.class, (BridgeRouterBuild tile, Integer i) -> {
-            if(i == -1) {
-                tile.links.clear();
-            } else {
-                tile.links.clear();
-                tile.links.add(i);
-            }
-        });
-        // 多连接配置（用于蓝图/批量）
+        // 配置使用 IntSeq 存储多个连接
         config(IntSeq.class, (BridgeRouterBuild tile, IntSeq seq) -> {
-            tile.links.clear();
-            for(int j = 0; j < seq.size; j += 2){
-                int dx = seq.get(j);
-                int dy = seq.get(j + 1);
-                int pos = Point2.pack(dx + tile.tileX(), dy + tile.tileY());
-                tile.links.add(pos);
-            }
+            tile.links = seq;
+            // 同步更新目标的 incoming
+            tile.syncIncoming();
         });
     }
 
@@ -85,6 +69,7 @@ public class BridgeRouter extends Block {
         if(transportTime != 0f){
             stats.add(Stat.itemsMoved, 10f / transportTime, StatUnit.itemsSecond);
         }
+        stats.add(Stat.powerConnections, maxLinks, StatUnit.none);
     }
 
     @Override
@@ -117,28 +102,47 @@ public class BridgeRouter extends Block {
         updateClipRadius((range + 0.5f) * tilesize);
     }
 
-    // ==================== 内部类 ====================
     public class BridgeRouterBuild extends Building {
-        // 主动连接列表（支持多个）
-        public IntSeq links = new IntSeq();
-        public int nextLinkIndex = 0;
-        // 被动连接列表（指向本建筑的其他桥）
+        public IntSeq links = new IntSeq(false, 4);
         public IntSeq incoming = new IntSeq(false, 4);
         public float warmup;
         public float time = -8f, timeSpeed;
         public boolean wasMoved, moved, hadValidLink;
         public float transportCounter;
+        public int sendIndex = 0; // 轮询发送索引
 
         @Override
         public void pickedUp() {
             links.clear();
+            incoming.clear();
         }
 
-        // ---------- 绘制单条桥间线（配置模式用） ----------
+        // 同步 incoming：将自己的坐标加入所有 link 目标的 incoming，并从不是自己的目标中移除
+        public void syncIncoming(){
+            // 先清除所有目标的 incoming 中自己的记录
+            for(int i = 0; i < links.size; i++){
+                int pos = links.get(i);
+                Tile t = world.tile(pos);
+                if(t != null && t.build instanceof BridgeRouterBuild other){
+                    other.incoming.removeValue(tile.pos());
+                }
+            }
+            // 再重新添加
+            for(int i = 0; i < links.size; i++){
+                int pos = links.get(i);
+                Tile t = world.tile(pos);
+                if(t != null && t.build instanceof BridgeRouterBuild other){
+                    if(!other.incoming.contains(tile.pos())){
+                        other.incoming.add(tile.pos());
+                    }
+                }
+            }
+        }
+
         private void drawInput(Tile other) {
             if (!linkValid(tile, other, false)) return;
+            // 画单条连接线（与原来一致）
             boolean linked = links.contains(other.pos());
-
             Tmp.v2.trns(tile.angleTo(other), 2f);
             float tx = tile.drawx(), ty = tile.drawy();
             float ox = other.drawx(), oy = other.drawy();
@@ -168,12 +172,10 @@ public class BridgeRouter extends Block {
             Draw.mixcol();
         }
 
-        // ---------- 配置模式绘制 ----------
         @Override
         public void drawConfigure(){
             Drawf.select(x, y, tile.block().size * tilesize / 2f + 2f, Pal.accent);
             Drawf.dashCircle(x, y, range * tilesize, Pal.accent);
-
             int r = range + tilesize;
             for(int dx = -r; dx <= r; dx++){
                 for(int dy = -r; dy <= r; dy++){
@@ -182,65 +184,78 @@ public class BridgeRouter extends Block {
                     Tile other = tile.nearby(dx, dy);
                     if(other == null) continue;
                     if(linkValid(tile, other)){
+                        // 如果该格子指向本建筑（incoming）且本建筑未主动连接它，则跳过红框
+                        if(incoming.contains(other.pos()) && !links.contains(other.pos())) continue;
                         boolean linked = links.contains(other.pos());
-                        // 如果其他建筑指向本建筑但本建筑未主动连接，跳过显示（避免干扰）
-                        if(!linked && incoming.contains(other.pos())) continue;
                         Drawf.select(other.drawx(), other.drawy(),
                             other.block().size * tilesize / 2f + 2f + (linked ? 0f : Mathf.absin(Time.time, 4f, 1f)),
                             linked ? Pal.place : Pal.breakInvalid);
                     }
                 }
             }
-
-            // 绘制所有已连接的桥间线
+            // 画所有主动连接的线
             for(int i = 0; i < links.size; i++){
-                Tile other = world.tile(links.get(i));
-                if(other != null) drawInput(other);
+                Tile t = world.tile(links.get(i));
+                if(t != null) drawInput(t);
             }
-            // 绘制所有被动连接的桥间线
+            // 画所有被动连接的线
             incoming.each(pos -> {
-                Tile other = world.tile(pos);
-                if(other != null) drawInput(other);
+                Tile t = world.tile(pos);
+                if(t != null) drawInput(t);
             });
-
             Draw.reset();
         }
 
-        // ---------- 配置点击交互 ----------
         @Override
-        public boolean onConfigureBuildTapped(Building other) {
+        public boolean onConfigureBuildTapped(Building other){
             if(other == this){
-                links.clear();  // 点击自身清空所有连接
+                // 点击自己：清空所有连接
+                configure(new IntSeq()); // 清空
                 return false;
             }
 
-            if(other instanceof BridgeRouterBuild b && linkValid(tile, other.tile)){
-                int pos = other.pos();
-                if(links.contains(pos)){
-                    links.removeValue(pos);  // 已连接则移除
-                }else{
-                    links.add(pos);          // 未连接则添加
-                }
+            if(!(other instanceof BridgeRouterBuild)) return true;
+
+            BridgeRouterBuild target = (BridgeRouterBuild) other;
+
+            // 如果目标指向自己（被动），且自己未连接它，忽略点击（阻止反向跳转）
+            if(target.links.contains(tile.pos()) && !links.contains(target.tile.pos())){
                 return false;
             }
-            return true;
+
+            // 切换连接
+            int targetPos = target.tile.pos();
+            if(links.contains(targetPos)){
+                // 移除连接
+                links.removeValue(targetPos);
+                // 从目标的 incoming 中移除自己
+                target.incoming.removeValue(tile.pos());
+            } else {
+                if(links.size >= maxLinks) return false; // 达到上限
+                links.add(targetPos);
+                // 将自己加入目标的 incoming
+                if(!target.incoming.contains(tile.pos())){
+                    target.incoming.add(tile.pos());
+                }
+            }
+            // 同步
+            configure(links); // 触发保存
+            return false;
         }
 
-        // ---------- 清理 incoming ----------
         public void checkIncoming(){
             int idx = 0;
             while(idx < incoming.size){
-                int i = incoming.items[idx];
+                int i = incoming.get(idx);
                 Tile other = world.tile(i);
                 if(other == null || !linkValid(tile, other, false) || !((BridgeRouterBuild)other.build).links.contains(tile.pos())){
                     incoming.removeIndex(idx);
-                    idx --;
+                } else {
+                    idx++;
                 }
-                idx ++;
             }
         }
 
-        // ---------- 更新逻辑 ----------
         @Override
         public void updateTile(){
             noSleep();
@@ -253,29 +268,60 @@ public class BridgeRouter extends Block {
             time += timeSpeed * delta();
             checkIncoming();
 
-            // 遍历所有主动连接，执行传输
-hadValidLink = false;
-for(int i = 0; i < links.size; i++){
-    Tile other = world.tile(links.get(i));
-    if(linkValid(tile, other)){
-        hadValidLink = true;
-        var targetBuild = (BridgeRouterBuild)other.build;
+            // 清理无效连接
+            for(int i = links.size - 1; i >= 0; i--){
+                Tile other = world.tile(links.get(i));
+                if(other == null || !linkValid(tile, other)){
+                    links.removeIndex(i);
+                }
+            }
 
-        if(!targetBuild.incoming.contains(tile.pos())){
-            targetBuild.incoming.add(tile.pos());
-        }
-
-        warmup = Mathf.approachDelta(warmup, 1f, 1f / 30f);
-        updateTransport(other.build);
-    }else{
-        links.removeIndex(i);
-        i--;
-    }
-}
+            hadValidLink = !links.isEmpty();
 
             if(!hadValidLink){
                 doDump();
                 warmup = 0f;
+                return;
+            }
+
+            // 同步 incoming（确保所有目标都有自己的坐标）
+            for(int i = 0; i < links.size; i++){
+                Tile other = world.tile(links.get(i));
+                if(other != null && other.build instanceof BridgeRouterBuild target){
+                    if(!target.incoming.contains(tile.pos())){
+                        target.incoming.add(tile.pos());
+                    }
+                }
+            }
+
+            warmup = Mathf.approachDelta(warmup, efficiency, 1f / 30f);
+
+            // 轮询发送
+            if(!links.isEmpty() && efficiency > 0){
+                if(sendIndex >= links.size) sendIndex = 0;
+                int start = sendIndex;
+                boolean sent = false;
+                do {
+                    int pos = links.get(sendIndex);
+                    Tile targetTile = world.tile(pos);
+                    if(targetTile != null && targetTile.build instanceof BridgeRouterBuild target){
+                        if(linkValid(tile, targetTile)){
+                            // 尝试发送物品
+                            if(items.total() > 0){
+                                Item item = items.first();
+                                int amount = 1;
+                                if(target.items.total() < target.itemCapacity && target.acceptItem(this, item)){
+                                    target.handleItem(this, item);
+                                    items.remove(item, amount);
+                                    moved = true;
+                                    sent = true;
+                                }
+                            }
+                        }
+                    }
+                    sendIndex = (sendIndex + 1) % links.size;
+                    if(sent || items.total() == 0) break;
+                } while(sendIndex != start);
             }
         }
 
@@ -283,239 +329,177 @@ for(int i = 0; i < links.size; i++){
             dumpAccumulate();
         }
 
-        // ---------- 单次传输（对单个目标） ----------
-public boolean updateTransport(Building other){
-    transportCounter += edelta();
-
-    while(transportCounter >= transportTime){
-
-        Item item = items.take();
-
-        if(item != null && other.acceptItem(this, item)){
-            other.handleItem(this, item);
-            moved = true;
-
-            transportCounter -= transportTime;
-            return true; // 成功发送
-        }
-        else if(item != null){
-            items.add(item, 1);
-            items.undoFlow(item);
-        }
-
-        transportCounter -= transportTime;
-    }
-
-    return false;
-}
-
-        // ---------- 绘制主连接（遍历所有连接） ----------
         @Override
         public void draw(){
             super.draw();
+
             if(links.isEmpty()) return;
-
-            for(int idx = 0; idx < links.size; idx++){
-                Tile other = world.tile(links.get(idx));
-                if(other == null || !linkValid(tile, other)) continue;
-                drawConnection(other);
-            }
-        }
-
-        // ---------- 绘制单条连接（抽取出独立方法） ----------
-        private void drawConnection(Tile other){
             if(Mathf.zero(Renderer.bridgeOpacity)) return;
 
-            float tx = tile.drawx(), ty = tile.drawy();
-            float ox = other.drawx(), oy = other.drawy();
+            // 遍历所有连接绘制
+            for(int linkIdx = 0; linkIdx < links.size; linkIdx++){
+                int pos = links.get(linkIdx);
+                Tile other = world.tile(pos);
+                if(other == null || !linkValid(tile, other)) continue;
 
-            float dx = ox - tx, dy = oy - ty;
-            float length = Mathf.dst(dx, dy);
-            if(length <= 0.001f) return;
+                float tx = tile.drawx();
+                float ty = tile.drawy();
+                float ox = other.drawx();
+                float oy = other.drawy();
+                float dx = ox - tx;
+                float dy = oy - ty;
+                float length = Mathf.dst(dx, dy);
+                if(length <= 0.001f) continue;
 
-            float ux = dx / length, uy = dy / length;
-            float nx = -uy, ny = ux;
+                float ux = dx / length;
+                float uy = dy / length;
+                float nx = -uy;
+                float ny = ux;
 
-            float offset = 2f, inset = 4f, extend = 1.5f;
+                float offset = 2f;
+                float inset = 4f;
+                float extend = 1.5f;
 
-            float innerStartX = tx + ux * inset, innerStartY = ty + uy * inset;
-            float innerEndX = ox - ux * inset, innerEndY = oy - uy * inset;
+                float innerStartX = tx + ux * inset;
+                float innerStartY = ty + uy * inset;
+                float innerEndX = ox - ux * inset;
+                float innerEndY = oy - uy * inset;
 
-            float outerStartX = innerStartX - ux * extend, outerStartY = innerStartY - uy * extend;
-            float outerEndX = innerEndX + ux * extend, outerEndY = innerEndY + uy * extend;
+                float outerStartX = innerStartX - ux * extend;
+                float outerStartY = innerStartY - uy * extend;
+                float outerEndX = innerEndX + ux * extend;
+                float outerEndY = innerEndY + uy * extend;
 
-            float warmup = hasPower ? this.warmup : 1f;
-            float powerLoss = 1f - warmup;
+                float warmup = hasPower ? this.warmup : 1f;
+                float powerLoss = 1f - warmup;
 
-            Color outerColor = Tmp.c1.set(LINE_COLOR_OUTER).lerp(POWER_LOSS_COLOR, powerLoss);
-            Color innerColor = Tmp.c2.set(LINE_COLOR_INNER).lerp(POWER_LOSS_INNER_COLOR, powerLoss);
+                Color outerColor = Tmp.c1.set(LINE_COLOR_OUTER).lerp(POWER_LOSS_COLOR, powerLoss);
+                Color innerColor = Tmp.c2.set(LINE_COLOR_INNER).lerp(POWER_LOSS_INNER_COLOR, powerLoss);
 
-            Draw.alpha(Renderer.bridgeOpacity);
-            Draw.z(Layer.blockOver + 0.03f);
+                Draw.alpha(Renderer.bridgeOpacity);
+                Draw.z(Layer.blockOver + 0.03f);
 
-            Draw.color(outerColor);
-            Lines.stroke(1f);
-
-            Lines.line(outerStartX + nx * offset, outerStartY + ny * offset,
-                       outerEndX + nx * offset, outerEndY + ny * offset);
-            Lines.line(outerStartX - nx * offset, outerStartY - ny * offset,
-                       outerEndX - nx * offset, outerEndY - ny * offset);
-
-            // 端帽
-            Lines.line(outerStartX + nx * offset, outerStartY + ny * offset,
-                       outerStartX - nx * offset, outerStartY - ny * offset);
-            Lines.line(outerEndX + nx * offset, outerEndY + ny * offset,
-                       outerEndX - nx * offset, outerEndY - ny * offset);
-
-            Draw.z(Layer.blockOver + 0.02f);
-            Draw.color(innerColor);
-            Lines.stroke(4f);
-            Lines.line(innerStartX, innerStartY, innerEndX, innerEndY);
-
-            // 箭头
-            Draw.z(Layer.blockOver + 0.01f);
-            float arrowLength = length - inset * 2f;
-            int arrows = (int)(arrowLength / arrowSpacing);
-            if(arrows > 0 && warmup > 0f){
-                float angle = Angles.angle(dx, dy);
-                float rad = angle * Mathf.degRad;
                 Draw.color(outerColor);
-                for(int a = 0; a < arrows; a++){
-                    float dist = inset + a * arrowSpacing;
-                    if(dist > length - inset - 3f) continue;
-                    float px = tx + ux * dist, py = ty + uy * dist;
-                    float timeFactor = (warmup > 0f) ? Time.time / arrowTimeScl : 0f;
-                    float alpha = Mathf.absin(a - timeFactor, arrowPeriod, 1f);
-                    if(alpha <= 0.01f) continue;
-                    float displayAlpha = (warmup > 0f) ? alpha * warmup : alpha;
-                    Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
-                    float size = 2.4f;
-                    Fill.tri(
-                        px + Mathf.cos(rad) * size, py + Mathf.sin(rad) * size,
-                        px + Mathf.cos(rad + Mathf.PI * 0.5f) * size, py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
-                        px + Mathf.cos(rad - Mathf.PI * 0.5f) * size, py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
-                    );
+                Lines.stroke(1f);
+                Lines.line(outerStartX + nx * offset, outerStartY + ny * offset, outerEndX + nx * offset, outerEndY + ny * offset);
+                Lines.line(outerStartX - nx * offset, outerStartY - ny * offset, outerEndX - nx * offset, outerEndY - ny * offset);
+
+                Draw.color(outerColor);
+                Lines.stroke(1f);
+                Lines.line(outerStartX + nx * offset, outerStartY + ny * offset, outerStartX - nx * offset, outerStartY - ny * offset);
+                Lines.line(outerEndX + nx * offset, outerEndY + ny * offset, outerEndX - nx * offset, outerEndY - ny * offset);
+
+                Draw.z(Layer.blockOver + 0.02f);
+                Draw.color(innerColor);
+                Lines.stroke(4f);
+                Lines.line(innerStartX, innerStartY, innerEndX, innerEndY);
+
+                // 流动箭头
+                Draw.z(Layer.blockOver + 0.01f);
+                float arrowLength = length - inset * 2f;
+                int arrows = (int)(arrowLength / arrowSpacing);
+                if(arrows > 0 && warmup > 0f){
+                    float angle = Angles.angle(dx, dy);
+                    float rad = angle * Mathf.degRad;
+                    Draw.color(outerColor);
+                    for(int a = 0; a < arrows; a++){
+                        float dist = inset + a * arrowSpacing;
+                        if(dist > length - inset - 3f) continue;
+                        float px = tx + ux * dist;
+                        float py = ty + uy * dist;
+                        float timeFactor = Time.time / arrowTimeScl;
+                        float alpha = Mathf.absin(a - timeFactor, arrowPeriod, 1f);
+                        if(alpha <= 0.01f) continue;
+                        Draw.alpha(alpha * warmup * Renderer.bridgeOpacity);
+                        float size = 2.4f;
+                        Fill.tri(
+                            px + Mathf.cos(rad) * size,
+                            py + Mathf.sin(rad) * size,
+                            px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
+                            py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
+                            px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
+                            py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
+                        );
+                    }
                 }
             }
+            Draw.reset();
         }
 
-        // ---------- 物品接受 ----------
-@Override
-public boolean acceptItem(Building source, Item item){
-    if(source == this || !hasItems || team != source.team || items.total() >= itemCapacity){
-        return false;
-    }
-
-    // 其他 BridgeRouter 主动连接到我
-    if(source instanceof BridgeRouterBuild bridge){
-        return bridge.links.contains(tile.pos());
-    }
-
-    // 普通运输建筑输入
-    if(!links.isEmpty()){
-        Tile target = world.tile(links.get(0));
-        return target != null && checkAccept(source, target);
-    }
-
-    return false;
-}
+        @Override
+        public boolean acceptItem(Building source, Item item){
+            // 只有当连接非空且源头是连接的建筑之一时才接受？
+            // 原版允许从任何有效源接受，但只发给自己的 links
+            return hasItems && team == source.team && items.total() < itemCapacity && checkAccept(source, world.tile(links.isEmpty() ? -1 : links.get(0)));
+        }
 
         protected boolean checkAccept(Building source, Tile link){
+            // 简化版，只检查链接是否有效
             if(tile == null || linked(source)) return true;
-
-            if(linkValid(tile, link)){
-                int rel = relativeTo(link);
-                var facing = Edges.getFacingEdge(source, this);
-                int rel2 = facing == null ? -1 : relativeTo(facing);
-                return rel != rel2;
+            if(link != null && linkValid(tile, link)){
+                return true;
             }
             return false;
         }
 
         protected boolean linked(Building source){
-            return source instanceof BridgeRouterBuild && linkValid(source.tile, tile) && ((BridgeRouterBuild)source).links.contains(tile.pos());
+            if(!(source instanceof BridgeRouterBuild)) return false;
+            BridgeRouterBuild other = (BridgeRouterBuild) source;
+            return other.links.contains(tile.pos());
         }
 
-        // ---------- 倾倒 ----------
         @Override
         public boolean canDump(Building to, Item item){
             return checkDump(to);
         }
 
         protected boolean checkDump(Building to){
-            Tile other = world.tile(links.isEmpty() ? -1 : links.get(0));
-            if(!linkValid(tile, other)){
-                Tile edge = Edges.getFacingEdge(to.tile, tile);
-                int i = relativeTo(edge.x, edge.y);
-
-                for(int j = 0; j < incoming.size; j++){
-                    int v = incoming.items[j];
-                    if(relativeTo(Point2.x(v), Point2.y(v)) == i){
-                        return false;
-                    }
-                }
-                return true;
-            }
-
-            int rel = relativeTo(other.x, other.y);
-            int rel2 = relativeTo(to.tileX(), to.tileY());
-
-            return rel != rel2;
+            // 允许向任何有效的目标倾倒（用于物品溢出）
+            return true;
         }
 
         @Override
         public boolean shouldConsume(){
-            return hadValidLink && enabled;
+            return !links.isEmpty() && enabled;
         }
 
-        // ---------- 配置/存档 ----------
         @Override
-        public Point2 config(){
-            if(links.size > 0){
-                int pos = links.get(0);
-                return Point2.unpack(pos).sub(tile.x, tile.y);
-            }
-            return new Point2(0, 0);
+        public IntSeq config(){
+            return links;
         }
 
         @Override
         public byte version(){
-            return 2;
+            return 2; // 更新版本号
         }
 
         @Override
         public void write(Writes write){
             super.write(write);
-            write.s(links.size);
+            write.i(links.size);
             for(int i = 0; i < links.size; i++){
                 write.i(links.get(i));
             }
             write.f(warmup);
             write.b(incoming.size);
             for(int i = 0; i < incoming.size; i++){
-                write.i(incoming.items[i]);
+                write.i(incoming.get(i));
             }
             write.bool(wasMoved || moved);
-            write.i(nextLinkIndex);
         }
 
         @Override
         public void read(Reads read, byte revision){
             super.read(read, revision);
             links.clear();
-            if(revision >= 2){
-                int size = read.s();
-                for(int i = 0; i < size; i++){
-                    links.add(read.i());
-                }
-            }else{
-                // 旧版本单连接兼容
-                int oldLink = read.i();
-                if(oldLink != -1) links.add(oldLink);
+            int size = read.i();
+            if(size > maxLinks) size = maxLinks;
+            for(int i = 0; i < size; i++){
+                links.add(read.i());
             }
             warmup = read.f();
-            byte incSize = read.b();
             incoming.clear();
+            int incSize = read.b();
             for(int i = 0; i < incSize; i++){
                 incoming.add(read.i());
             }
