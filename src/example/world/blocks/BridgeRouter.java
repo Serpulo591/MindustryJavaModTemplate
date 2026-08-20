@@ -324,6 +324,9 @@ public void draw(){
     Color innerColor = Tmp.c2.set(LINE_COLOR_INNER)
         .lerp(POWER_LOSS_INNER_COLOR, powerLoss);
 
+    // 统一线条透明度（受全局控制）
+    Draw.alpha(Renderer.bridgeOpacity);
+
     //========================================
     // 外层双线
     //========================================
@@ -382,52 +385,52 @@ public void draw(){
         outerEndY - ny * offset
     );
 
-//========================================
-// 流动箭头（未启用时静止）
-//========================================
+    //========================================
+    // 流动箭头（未启用时静止）
+    //========================================
 
-int arrows = (int)(length / arrowSpacing);
+    int arrows = (int)(length / arrowSpacing);
 
-if(arrows > 0){
-    float angle = Angles.angle(dx, dy);
-    float rad = angle * Mathf.degRad;
+    if(arrows > 0){
+        float angle = Angles.angle(dx, dy);
+        float rad = angle * Mathf.degRad;
 
-    Draw.color(outerColor);
+        Draw.color(outerColor);
 
-    for(int a = 0; a < arrows; a++){
+        for(int a = 0; a < arrows; a++){
 
-        float px = tx + ux * (inset + a * arrowSpacing);
-        float py = ty + uy * (inset + a * arrowSpacing);
+            float px = tx + ux * (inset + a * arrowSpacing);
+            float py = ty + uy * (inset + a * arrowSpacing);
 
-        // ★ 当 warmup <= 0.01 时，固定时间，使箭头静止 ★
-        float timeFactor = (warmup > 0.01f) ? Time.time / arrowTimeScl : 0f;
+            // ★ 当 warmup <= 0.01 时，固定时间，使箭头静止 ★
+            float timeFactor = (warmup > 0.01f) ? Time.time / arrowTimeScl : 0f;
 
-        float alpha = Mathf.absin(
-            a - timeFactor,
-            arrowPeriod,
-            1f
-        );
+            float alpha = Mathf.absin(
+                a - timeFactor,
+                arrowPeriod,
+                1f
+            );
 
-        if(alpha <= 0.01f) continue;
+            if(alpha <= 0.01f) continue;
 
-        // ★ 透明度：启用时用 warmup，未启用时固定为 0.3 ★
-        float displayAlpha = (warmup > 0.01f) ? alpha * warmup : 0.3f;
-        Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
+            // ★ 透明度：启用时用 warmup，未启用时固定为 0.3 ★
+            float displayAlpha = (warmup > 0.01f) ? alpha * warmup : 0.3f;
+            Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
 
-        float size = 2.4f;
+            float size = 2.4f;
 
-        Fill.tri(
-            px + Mathf.cos(rad) * size,
-            py + Mathf.sin(rad) * size,
+            Fill.tri(
+                px + Mathf.cos(rad) * size,
+                py + Mathf.sin(rad) * size,
 
-            px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
-            py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
+                px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
+                py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
 
-            px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
-            py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
-        );
+                px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
+                py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
+            );
+        }
     }
-}
 
     Draw.reset();
 }
