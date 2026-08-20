@@ -31,9 +31,9 @@ public class BridgeRouter extends Block {
     public float arrowSpacing = 4f, arrowPeriod = 0.4f;
     public float arrowTimeScl = 6.2f;
     private static final Color POWER_LOSS_COLOR = Color.valueOf("#f49fa680");
-    private static final Color POWER_LOSS_INNER_COLOR = Color.valueOf("#ec767859");
+    private static final Color POWER_LOSS_INNER_COLOR = Color.valueOf("#ec767838");
     private static final Color LINE_COLOR_OUTER = Color.valueOf("#c0edf4");
-    private static final Color LINE_COLOR_INNER = Color.valueOf("#a1d7ecb3");
+    private static final Color LINE_COLOR_INNER = Color.valueOf("#a1d7ec80");
 
     public BridgeRouter(String name){
         super(name);
@@ -47,7 +47,7 @@ public class BridgeRouter extends Block {
         unloadable = false;
         group = BlockGroup.transportation;
         noUpdateDisabled = true;
-        allowDiagonal = false;
+        allowDiagonal = true;
         copyConfig = false;
         allowConfigInventory = false;
         ignoreResizeConfig = true;
@@ -61,7 +61,7 @@ public class BridgeRouter extends Block {
     public void setStats() {
         super.setStats();
         if(transportTime != 0f){
-            stats.add(Stat.itemsMoved, 60f / transportTime, StatUnit.itemsSecond);
+            stats.add(Stat.itemsMoved, 10f / transportTime, StatUnit.itemsSecond);
         }
     }
     
@@ -320,6 +320,7 @@ public void draw(){
 
     // 统一线条透明度（受全局控制）
     Draw.alpha(Renderer.bridgeOpacity);
+    Draw.z(Layer.blockOver);
 
     //========================================
     // 外层双线
@@ -383,7 +384,9 @@ public void draw(){
     // 流动箭头（未启用时静止）
     //========================================
 
-    int arrows = (int)(length / arrowSpacing);
+    Draw.z(Layer.blockOver);
+    float arrowLength = length - inset * 2f;
+    int arrows = (int)(arrowLength / arrowSpacing);
 
     if(arrows > 0 && warmup > 0f){
         float angle = Angles.angle(dx, dy);
@@ -393,8 +396,14 @@ public void draw(){
 
         for(int a = 0; a < arrows; a++){
 
-            float px = tx + ux * (inset + a * arrowSpacing);
-            float py = ty + uy * (inset + a * arrowSpacing);
+float dist = inset + a * arrowSpacing;
+
+if(dist > length - inset - 3f){
+    continue;
+}
+
+float px = tx + ux * dist;
+float py = ty + uy * dist;
 
             // ★ 当 warmup <= 0.01 时，固定时间，使箭头静止 ★
             float timeFactor = (warmup > 0f) ? Time.time / arrowTimeScl : 0f;
@@ -410,17 +419,17 @@ public void draw(){
             float displayAlpha = (warmup > 0f) ? alpha * warmup : alpha;
             Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
 
-            float size = 2.4f;
+            float size = 1.5f;
 
             Fill.tri(
                 px + Mathf.cos(rad) * size,
                 py + Mathf.sin(rad) * size,
 
-                px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
-                py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
+                px + Mathf.cos(rad + Mathf.PI * 0.75f) * size,
+                py + Mathf.sin(rad + Mathf.PI * 0.75f) * size,
 
-                px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
-                py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
+                px + Mathf.cos(rad - Mathf.PI * 0.75f) * size,
+                py + Mathf.sin(rad - Mathf.PI * 0.75f) * size
             );
         }
     }
