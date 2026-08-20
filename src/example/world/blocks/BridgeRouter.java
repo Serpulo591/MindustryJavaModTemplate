@@ -34,10 +34,6 @@ public class BridgeRouter extends Block {
     public float arrowSpacing = 4f, arrowOffset = 2f, arrowPeriod = 0.4f;
     public float arrowTimeScl = 6.2f;
     public float bridgeWidth = 6.5f;
-    private static final Color POWER_LOSS_COLOR = Color.valueOf("#f49fa680");
-    private static final Color POWER_LOSS_INNER_COLOR = Color.valueOf("#ec767859");
-    private static final Color LINE_COLOR_OUTER = Color.valueOf("#c0edf4");
-    private static final Color LINE_COLOR_INNER = Color.valueOf("#a1d7ecb3");
     
     public @Nullable BridgeRouterBuild lastBuild;
 
@@ -107,9 +103,6 @@ public class BridgeRouter extends Block {
         public float time = -8f, timeSpeed;
         public boolean wasMoved, moved, hadValidLink;
         public float transportCounter;
-        public boolean frozen = false;
-        public float frozenWarmup = 1f;
-        public float frozenTimeFactor = 0f;
     
         @Override
         public void pickedUp() {
@@ -214,13 +207,6 @@ public class BridgeRouter extends Block {
                 wasMoved = moved;
                 moved = false;
             }
-            
-            boolean hasItems = items.total() > 0;
-            if (hasItems) {
-                frozen = false;
-            } else if (!frozen) {
-                frozen = true;
-            }
 
             timeSpeed = Mathf.approachDelta(timeSpeed, wasMoved ? 1f : 0f, 1f / 60f);
             time += timeSpeed * delta();
@@ -269,101 +255,73 @@ public void draw(){
     if(!linkValid(tile, other)) return;
     if(Mathf.zero(Renderer.bridgeOpacity)) return;
 
-    float tx = tile.drawx();
-    float ty = tile.drawy();
-    float ox = other.drawx();
-    float oy = other.drawy();
+    float tx = tile.drawx(), ty = tile.drawy();
+    float ox = other.drawx(), oy = other.drawy();
 
-    float dx = ox - tx;
-    float dy = oy - ty;
+    float dx = ox - tx, dy = oy - ty;
     float length = Mathf.dst(dx, dy);
-    if(length <= 0.001f) return;
+    if(length == 0) return;
 
     float ux = dx / length;
     float uy = dy / length;
     float nx = -uy;
     float ny = ux;
-
     float offset = 2f;
-    float inset = 4f;
-    float extend = 1.5f;
 
+    float inset = 4f;
     float innerStartX = tx + ux * inset;
     float innerStartY = ty + uy * inset;
     float innerEndX = ox - ux * inset;
     float innerEndY = oy - uy * inset;
 
+    float extend = 1.5f;
     float outerStartX = innerStartX - ux * extend;
     float outerStartY = innerStartY - uy * extend;
     float outerEndX = innerEndX + ux * extend;
     float outerEndY = innerEndY + uy * extend;
 
     float warmup = hasPower ? this.warmup : 1f;
-    float powerLoss = 1f - warmup;
 
-    Color outerColor = Tmp.c1.set(LINE_COLOR_OUTER)
-        .lerp(POWER_LOSS_COLOR, powerLoss);
-    Color innerColor = Tmp.c2.set(LINE_COLOR_INNER)
-        .lerp(POWER_LOSS_INNER_COLOR, powerLoss);
-
-    Draw.alpha(Renderer.bridgeOpacity);
-
-    // --- 绘制线条（不变） ---
-    Draw.color(outerColor);
+    // 外线（灰色）
+    Draw.color(warmup < 0.5f ? Color.valueOf("#f49fa680") : Color.valueOf("#c0edf4"));
     Lines.stroke(1f);
-    Lines.line(outerStartX + nx * offset, outerStartY + ny * offset, outerEndX + nx * offset, outerEndY + ny * offset);
-    Lines.line(outerStartX - nx * offset, outerStartY - ny * offset, outerEndX - nx * offset, outerEndY - ny * offset);
+    Lines.line(outerStartX + nx * offset, outerStartY + ny * offset,
+               outerEndX + nx * offset, outerEndY + ny * offset);
+    Lines.line(outerStartX - nx * offset, outerStartY - ny * offset,
+               outerEndX - nx * offset, outerEndY - ny * offset);
 
-    Draw.color(innerColor);
+    // 内线（效率低时变色）
+    Draw.color(warmup < 0.5f ? Color.valueOf("#ec767859") : Color.valueOf("#a1d7ecb3"));
     Lines.stroke(4f);
     Lines.line(innerStartX, innerStartY, innerEndX, innerEndY);
 
-    Draw.color(outerColor);
+    // 端帽
+    Draw.color(Color.valueOf("#c0edf4"));
     Lines.stroke(1f);
-    Lines.line(outerStartX + nx * offset, outerStartY + ny * offset, outerStartX - nx * offset, outerStartY - ny * offset);
-    Lines.line(outerEndX + nx * offset, outerEndY + ny * offset, outerEndX - nx * offset, outerEndY - ny * offset);
+    Lines.line(outerStartX + nx * offset, outerStartY + ny * offset,
+               outerStartX - nx * offset, outerStartY - ny * offset);
+    Lines.line(outerEndX + nx * offset, outerEndY + ny * offset,
+               outerEndX - nx * offset, outerEndY - ny * offset);
 
-    // --- 箭头（透明度波浪，持续流动） ---
+    // 流动箭头（完全照搬 JS 的 drawFlowArrowsWithInset）
+    Draw.color(Color.valueOf("#c0edf4"));
     int arrows = (int)(length / arrowSpacing);
-    if(arrows > 0){
-        // 使用全局时间，始终流动（不受物品状态影响）
-        float timeFactor = Time.time / 10f;  // 控制流动速度
-        float effectiveWarmup = warmup;      // 功率影响整体亮度
-
-        float angle = Angles.angle(dx, dy);
+    if(arrows <= 0) return;
+    float angle = Angles.angle(dx, dy);
+    for(int a = 0; a < arrows; a++){
+        float px = tx + ux * (inset + a * arrowSpacing);
+        float py = ty + uy * (inset + a * arrowSpacing);
+        float timeScl = 12.6f;
+        float alpha = Mathf.absin(a - Time.time / timeScl, arrowPeriod, 1f);
+        if(alpha <= 0.01) continue;
+        float finalAlpha = alpha;
+        Draw.alpha(finalAlpha * warmup * Renderer.bridgeOpacity);
         float rad = angle * Mathf.degRad;
-
-        Draw.color(outerColor);
-
-        // 波浪参数：每个箭头透明度 = 0.2 + 0.8 * sin( 2π*(位置比例/波长 - 时间因子) )
-        float waveLength = 0.8f;   // 桥上有 1/waveLength 个波峰（约1.25个）
-        float waveSpeed = 1.5f;
-
-        for(int a = 0; a < arrows; a++){
-            // 箭头固定位置
-            float px = tx + ux * (inset + a * arrowSpacing);
-            float py = ty + uy * (inset + a * arrowSpacing);
-
-            // 该箭头在桥上的位置比例（0~1）
-            float posRatio = (inset + a * arrowSpacing) / length;
-            // 正弦波计算，范围 -1~1 映射到 0~1，但保留底光0.2
-            float sinVal = Mathf.sin(Mathf.PI2 * (posRatio / waveLength - timeFactor * waveSpeed));
-            float alpha = 0.2f + 0.8f * (0.5f + 0.5f * sinVal);  // 结果在 0.2~1.0 之间
-            if(alpha <= 0.01f) continue;
-
-            float displayAlpha = alpha * effectiveWarmup;
-            Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
-
-            float size = 2.4f;
-            Fill.tri(
-                px + Mathf.cos(rad) * size,
-                py + Mathf.sin(rad) * size,
-                px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
-                py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
-                px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
-                py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
-            );
-        }
+        Fill.tri(
+            px + Mathf.cos(rad) * 2.4f, py + Mathf.sin(rad) * 2.4f,
+            px + Mathf.cos(rad + Mathf.PI * 0.5f) * 2.4f, py + Mathf.sin(rad + Mathf.PI * 0.5f) * 2.4f,
+            px + Mathf.cos(rad - Mathf.PI * 0.5f) * 2.4f, py + Mathf.sin(rad - Mathf.PI * 0.5f) * 2.4f
+        );
     }
 
     Draw.reset();
