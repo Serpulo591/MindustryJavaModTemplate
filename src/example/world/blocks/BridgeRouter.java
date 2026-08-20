@@ -12,6 +12,9 @@ import arc.math.geom.*;
 import arc.struct.*;
 import arc.util.*;
 import arc.util.io.*;
+import arc.Events;
+import arc.util.Time;
+import mindustry.game.EventType.Trigger;
 import mindustry.core.*;
 import mindustry.entities.*;
 import mindustry.entities.units.*;
@@ -35,9 +38,8 @@ public class BridgeRouter extends StorageBlock {
     public float arrowSpacing = 4f, arrowOffset = 2f, arrowPeriod = 0.4f;
     public float arrowTimeScl = 6.2f;
     public float bridgeWidth = 6.5f;
-    
+    public static final Seq<BridgeRouterBuild> activeBridges = new Seq<>();  
     public @Nullable BridgeRouterBuild lastBuild;
-
     public BridgeRouter(String name){
         super(name);
         update = true;
@@ -95,6 +97,28 @@ public class BridgeRouter extends StorageBlock {
     public void init(){
         super.init();
         updateClipRadius((range + 0.5f) * tilesize);
+        Events.run(Trigger.draw, () -> {
+            float prevZ = Draw.z();
+            Draw.z(Layer.block + 1);
+            for (BridgeRouterBuild b : activeBridges) {
+                if (b.isValid()) {
+                    b.drawBridge();
+                }
+            }
+            Draw.z(prevZ);
+        });
+    }
+    
+    @Override
+    public void created(){
+        super.created();
+        activeBridges.add(this);
+    }
+
+    @Override
+    public void onRemoved(){
+        super.onRemoved();
+        activeBridges.remove(this);
     }
     
     public class BridgeRouterBuild extends StorageBuild {
@@ -297,8 +321,8 @@ public class BridgeRouter extends StorageBlock {
             Draw.color(Pal.accent);
             int arrows = Math.max(1, (int)(len / arrowSpacing));
             for(int i = 0; i < arrows; i++){
-                float progress = (i / (float)arrows + time / arrowTimeScl) % 1f;
-                float alpha = Mathf.absin(progress * arrows - time / arrowTimeScl, arrowPeriod, 1f);
+                float progress = (i / (float)arrows + Time.time / arrowTimeScl) % 1f;
+                float alpha = Mathf.absin(i - Time.time / arrowTimeScl, arrowPeriod, 1f);
                 Draw.alpha(alpha * warmup * Renderer.bridgeOpacity);
                 float ax = Mathf.lerp(startX, endX, progress);
                 float ay = Mathf.lerp(startY, endY, progress);
