@@ -421,7 +421,7 @@ float py = ty + uy * dist;
             Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
 
             float length = 1.5f;
-            float height = 3f;
+            float height = 30f;
 
             Fill.tri(
                 px + Mathf.cos(rad) * length,
