@@ -61,7 +61,7 @@ public class BridgeRouter extends Block {
     public void setStats() {
         super.setStats();
         if(transportTime != 0f){
-            stats.add(Stat.itemsMoved, 60f / transportTime, StatUnit.itemsSecond);
+            stats.add(Stat.itemsMoved, 10f / transportTime, StatUnit.itemsSecond);
         }
     }
     
@@ -419,18 +419,29 @@ float py = ty + uy * dist;
             float displayAlpha = (warmup > 0f) ? alpha * warmup : alpha;
             Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
 
-            float size = 2.4f;
+float size = 2.4f;
 
-            Fill.tri(
-                px + Mathf.cos(rad) * size,
-                py + Mathf.sin(rad) * size,
+// 尖端，朝目标方向
+float tipX = px + ux * size;
+float tipY = py + uy * size;
 
-                px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
-                py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
+// 后方中心
+float backX = px - ux * size;
+float backY = py - uy * size;
 
-                px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
-                py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
-            );
+// 左右翼
+float side = size * 0.8f;
+
+Fill.tri(
+    tipX,
+    tipY,
+
+    backX + nx * side,
+    backY + ny * side,
+
+    backX - nx * side,
+    backY - ny * side
+);
         }
     }
 
