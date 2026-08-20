@@ -72,6 +72,7 @@ public class BridgeRouter extends Block {
     }
     
     public boolean linkValid(Tile tile, Tile other){
+        if(other == tile) return false;
         return linkValid(tile, other, true);
     }
     
