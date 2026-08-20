@@ -261,12 +261,14 @@ public void draw(){
 
     float tx = tile.drawx();
     float ty = tile.drawy();
+
     float ox = other.drawx();
     float oy = other.drawy();
 
     float dx = ox - tx;
     float dy = oy - ty;
     float length = Mathf.dst(dx, dy);
+
     if(length <= 0.001f) return;
 
     float ux = dx / length;
@@ -298,7 +300,7 @@ public void draw(){
 
     Draw.alpha(Renderer.bridgeOpacity);
 
-    // ---- 外层双线 ----
+    // 外层双线
     Draw.color(outerColor);
     Lines.stroke(1f);
     Lines.line(
@@ -314,12 +316,17 @@ public void draw(){
         outerEndY - ny * offset
     );
 
-    // ---- 内部主线 ----
+    // 内部主线
     Draw.color(innerColor);
     Lines.stroke(4f);
-    Lines.line(innerStartX, innerStartY, innerEndX, innerEndY);
+    Lines.line(
+        innerStartX,
+        innerStartY,
+        innerEndX,
+        innerEndY
+    );
 
-    // ---- 端帽 ----
+    // 端帽
     Draw.color(outerColor);
     Lines.stroke(1f);
     Lines.line(
@@ -335,10 +342,10 @@ public void draw(){
         outerEndY - ny * offset
     );
 
-    // ---- 流动箭头（核心修改） ----
+    // 流动箭头（核心修改）
     int arrows = (int)(length / arrowSpacing);
     if(arrows > 0){
-        // ★ 判断是否有物品正在运输（等待或已装车） ★
+        // 判断是否有物品正在运输
         boolean hasItemsToTransport = items.total() > 0 && hadValidLink && enabled;
 
         float angle = Angles.angle(dx, dy);
@@ -350,13 +357,13 @@ public void draw(){
             float px = tx + ux * (inset + a * arrowSpacing);
             float py = ty + uy * (inset + a * arrowSpacing);
 
-            // ★ 有物品 → 时间因子随时间变化；无物品 → 固定为 0（箭头静止） ★
+            // 有物品则流动，无物品则时间因子固定为0（箭头静止，透明度不随时间更新）
             float timeFactor = hasItemsToTransport ? Time.time / arrowTimeScl : 0f;
             float alpha = Mathf.absin(a - timeFactor, arrowPeriod, 1f);
             if(alpha <= 0.01f) continue;
 
-            // ★ 透明度：运输中动态，无物品时固定为 0.3（完全不随时间更新） ★
-            float displayAlpha = hasItemsToTransport ? alpha * warmup : 0.3f;
+            // 透明度保持原有逻辑（alpha * warmup），无运输时因alpha恒定而不再变化
+            float displayAlpha = alpha * warmup;
             Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
 
             float size = 2.4f;
