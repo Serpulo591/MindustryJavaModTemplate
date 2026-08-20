@@ -101,7 +101,6 @@ public class BridgeRouter extends StorageBlock {
         public int link = -1;
         public IntSeq incoming = new IntSeq(false, 4);
         public float warmup;
-        public float totalProgress;
         public float time = -8f, timeSpeed;
         public boolean wasMoved, moved, hadValidLink;
         public float transportCounter;
@@ -227,8 +226,6 @@ public class BridgeRouter extends StorageBlock {
                 warmup = Mathf.approachDelta(warmup, efficiency, 1f / 30f);
                 updateTransport(other.build);
             }
-            totalProgress += delta();
-            if(totalProgress > 100000f) totalProgress -= 100000f;
         }
         
         public void doDump(){
@@ -250,68 +247,66 @@ public class BridgeRouter extends StorageBlock {
             }
         }
         
-@Override
-public void draw(){
-    // 1. 永远先绘制基础方块（调用 super.draw 或自己的默认纹理）
-    super.draw(); // 或 Draw.rect(...)
-    
-    // 2. 如果链接无效，画个简单标记并返回
-    Tile other = world.tile(link);
-    if(!linkValid(tile, other)){
-        Draw.color(Pal.accent, 0.5f + 0.5f * Mathf.sin(totalProgress * 2f));
-        Lines.circle(x, y, 4f);
-        Draw.reset();
-        return;  // 这里可以 return，因为已经没有桥体要画了
-    }
-    
-    if(Mathf.zero(Renderer.bridgeOpacity)) return;
-    
-    // 3. 计算桥体两端坐标
-    float tx = x, ty = y;
-    float ox = other.drawx(), oy = other.drawy();
-    float dx = ox - tx, dy = oy - ty;
-    float len = Mathf.dst(dx, dy);
-    if(len < 1f) return;
-    float nx = dx/len, ny = dy/len;
-    float inset = tilesize/2f;
-    float startX = tx + nx * inset, startY = ty + ny * inset;
-    float endX = ox - nx * inset, endY = oy - ny * inset;
-    
-    // 4. 动态颜色（用 totalProgress 驱动色相）
-    float hue = (totalProgress * 0.02f) % 360f;
-    Color dynamic = Color.HSVtoRGB(hue, 0.7f, 0.8f);
-    
-    // 5. 外线：随 totalProgress 轻微脉动宽度和偏移
-    float offset = 2.5f + 0.5f * Mathf.sin(totalProgress * 1.5f);
-    Draw.color(Pal.gray.lerp(dynamic, 0.3f));
-    Lines.stroke(2f + 0.3f * Mathf.sin(totalProgress * 0.7f));
-    Lines.line(startX + nx*offset, startY + ny*offset, endX + nx*offset, endY + ny*offset);
-    Lines.line(startX - nx*offset, startY - ny*offset, endX - nx*offset, endY - ny*offset);
-    
-    // 6. 内线：颜色流动，粗细变化
-    Draw.color(dynamic);
-    Lines.stroke(1.5f + 0.5f * Mathf.sin(totalProgress * 1.2f));
-    Lines.line(startX, startY, endX, endY);
-    
-    // 7. 端帽：旋转和缩放（参考 JumpGate 的 square 旋转）
-    float rot = totalProgress * 0.5f;
-    Draw.color(dynamic);
-    Lines.stroke(2f);
-    Lines.square(startX, startY, 4f + 0.5f * Mathf.sin(totalProgress * 2f), rot);
-    Lines.square(endX, endY, 4f + 0.5f * Mathf.sin(totalProgress * 2f + 1f), -rot);
-    
-    // 8. 流动箭头：使用 totalProgress
-    int arrows = Math.max(1, (int)(len / arrowSpacing));
-    for(int i=0; i<arrows; i++){
-        float progress = (i / (float)arrows + totalProgress / arrowTimeScl) % 1f;
-        float ax = Mathf.lerp(startX, endX, progress);
-        float ay = Mathf.lerp(startY, endY, progress);
-        float alpha = Mathf.absin(i - totalProgress / arrowTimeScl, arrowPeriod, 1f);
-        Draw.color(Pal.accent, alpha * warmup * Renderer.bridgeOpacity);
-        Fill.circle(ax, ay, 2.5f);
-    }
-    Draw.reset();
-}
+        @Override
+        public void draw(){
+            super.draw();
+        
+            Tile other = world.tile(link);
+            if(!linkValid(tile, other)) return;
+            if(Mathf.zero(Renderer.bridgeOpacity)) return;
+        
+            float tx = tile.drawx(), ty = tile.drawy();
+            float ox = other.drawx(), oy = other.drawy();
+        
+            float dx = ox - tx, dy = oy - ty;
+            float len = Mathf.dst(dx, dy);
+            if(len < 1f) return;
+            float nx = dx / len, ny = dy / len;
+        
+            float px = -ny, py = nx;
+        
+            float inset = tilesize / 2f;
+            float startX = tx + nx * inset, startY = ty + ny * inset;
+            float endX = ox - nx * inset, endY = oy - ny * inset;
+        
+            // ---- 1. 绘制两条平行外线 ----
+            float offset = 2.5f;
+            Draw.color(Pal.gray);
+            Lines.stroke(2.5f);
+            Lines.line(startX + px * offset, startY + py * offset,
+                       endX + px * offset, endY + py * offset);
+            Lines.line(startX - px * offset, startY - py * offset,
+                       endX - px * offset, endY - py * offset);
+        
+            // ---- 2. 绘制内线（效率低时变色） ----
+            float warmup = hasPower ? this.warmup : 1f;
+            Draw.color(warmup < 0.5f ? Pal.ammo : Pal.accent);
+            Lines.stroke(1f);
+            Lines.line(startX, startY, endX, endY);
+        
+            // ---- 3. 绘制两端端帽 ----
+            Draw.color(Pal.accent);
+            Lines.stroke(2f);
+            float capLen = 4f;
+            Lines.line(startX + px * capLen, startY + py * capLen,
+                       startX - px * capLen, startY - py * capLen);
+            Lines.line(endX + px * capLen, endY + py * capLen,
+                       endX - px * capLen, endY - py * capLen);
+        
+            // ---- 4. 绘制流动箭头 ----
+            Draw.color(Pal.accent);
+            int arrows = Math.max(1, (int)(len / arrowSpacing));
+            for(int i = 0; i < arrows; i++){
+                float progress = (i / (float)arrows + time / arrowTimeScl) % 1f;
+                float alpha = Mathf.absin(progress * arrows - time / arrowTimeScl, arrowPeriod, 1f);
+                Draw.alpha(alpha * warmup * Renderer.bridgeOpacity);
+                float ax = Mathf.lerp(startX, endX, progress);
+                float ay = Mathf.lerp(startY, endY, progress);
+                Fill.circle(ax, ay, 2f);
+            }
+        
+            Draw.reset();
+        }
         
         @Override
         public boolean acceptItem(Building source, Item item){
