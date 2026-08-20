@@ -170,7 +170,11 @@ public class BridgeRouter extends Block {
         
         @Override
         public boolean onConfigureBuildTapped(Building other){
-            //reverse connection
+            if(other == this){
+                configure(-1);
+                return false;
+            }
+
             if(other instanceof BridgeRouterBuild b && b.link == pos()){
                 configure(other.pos());
                 other.configure(-1);
