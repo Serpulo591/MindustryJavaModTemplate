@@ -414,7 +414,7 @@ public void draw(){
             if(alpha <= 0.01f) continue;
 
             // ★ 透明度：启用时用 warmup，未启用时固定为 0.3 ★
-            float displayAlpha = (warmup > 0.01f) ? alpha * warmup : 0.3f;
+            float displayAlpha = (warmup > 0.01f) ? alpha * warmup : alpha;
             Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
 
             float size = 2.4f;
