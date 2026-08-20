@@ -308,7 +308,7 @@ public void draw(){
 
     Draw.alpha(Renderer.bridgeOpacity);
 
-    // 绘制线条（不变）
+    // --- 绘制线条（不变） ---
     Draw.color(outerColor);
     Lines.stroke(1f);
     Lines.line(outerStartX + nx * offset, outerStartY + ny * offset, outerEndX + nx * offset, outerEndY + ny * offset);
@@ -323,30 +323,32 @@ public void draw(){
     Lines.line(outerStartX + nx * offset, outerStartY + ny * offset, outerStartX - nx * offset, outerStartY - ny * offset);
     Lines.line(outerEndX + nx * offset, outerEndY + ny * offset, outerEndX - nx * offset, outerEndY - ny * offset);
 
-    // ---- 箭头（透明度波浪，位置固定） ----
+    // --- 箭头（透明度波浪，持续流动） ---
     int arrows = (int)(length / arrowSpacing);
     if(arrows > 0){
-        boolean hasItems = items.total() > 0 && hadValidLink && enabled;
-        float timeFactor = hasItems ? Time.time / arrowTimeScl : frozenTimeFactor;
-        float effectiveWarmup = hasItems ? warmup : frozenWarmup;
+        // 使用全局时间，始终流动（不受物品状态影响）
+        float timeFactor = Time.time / 10f;  // 控制流动速度
+        float effectiveWarmup = warmup;      // 功率影响整体亮度
 
         float angle = Angles.angle(dx, dy);
         float rad = angle * Mathf.degRad;
 
         Draw.color(outerColor);
 
-        // 波浪参数（可调）
-        float waveSpeed = 2.0f;      // 流动速度
-        float waveLength = 2.0f;     // 波在桥上的覆盖长度倍数
+        // 波浪参数：每个箭头透明度 = 0.2 + 0.8 * sin( 2π*(位置比例/波长 - 时间因子) )
+        float waveLength = 0.8f;   // 桥上有 1/waveLength 个波峰（约1.25个）
+        float waveSpeed = 1.5f;
 
         for(int a = 0; a < arrows; a++){
+            // 箭头固定位置
             float px = tx + ux * (inset + a * arrowSpacing);
             float py = ty + uy * (inset + a * arrowSpacing);
 
-            // 计算该箭头在桥上的位置比例 (0~1)
+            // 该箭头在桥上的位置比例（0~1）
             float posRatio = (inset + a * arrowSpacing) / length;
-            // 波浪透明度：0.5~1.0 之间正弦变化，避免完全消失
-            float alpha = 0.5f + 0.5f * Mathf.sin(Mathf.PI2 * (posRatio * waveLength - timeFactor * waveSpeed));
+            // 正弦波计算，范围 -1~1 映射到 0~1，但保留底光0.2
+            float sinVal = Mathf.sin(Mathf.PI2 * (posRatio / waveLength - timeFactor * waveSpeed));
+            float alpha = 0.2f + 0.8f * (0.5f + 0.5f * sinVal);  // 结果在 0.2~1.0 之间
             if(alpha <= 0.01f) continue;
 
             float displayAlpha = alpha * effectiveWarmup;
