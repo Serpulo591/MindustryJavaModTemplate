@@ -383,8 +383,9 @@ public void draw(){
     // 流动箭头（未启用时静止）
     //========================================
 
-    int arrows = (int)(length / arrowSpacing);
-    if (arrows > 0) arrows--;
+    float arrowSize = 2.4f;
+    int arrows = (int)((length - 2f * inset - arrowSize) / arrowSpacing);
+    if (arrows < 0) arrows = 0;
 
     if(arrows > 0 && warmup > 0f){
         float angle = Angles.angle(dx, dy);
