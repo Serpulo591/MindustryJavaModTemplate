@@ -426,11 +426,11 @@ float py = ty + uy * dist;
                 px + Mathf.cos(rad) * size,
                 py + Mathf.sin(rad) * size,
 
-                px + Mathf.cos(rad + Mathf.PI * 0.25f) * size,
-                py + Mathf.sin(rad + Mathf.PI * 0.25f) * size,
+                px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
+                py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
 
-                px + Mathf.cos(rad - Mathf.PI * 0.25f) * size,
-                py + Mathf.sin(rad - Mathf.PI * 0.25f) * size
+                px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
+                py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
             );
         }
     }
