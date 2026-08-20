@@ -320,7 +320,7 @@ public void draw(){
 
     // 统一线条透明度（受全局控制）
     Draw.alpha(Renderer.bridgeOpacity);
-    Draw.z(Layer.blockOver + 0.03);
+    Draw.z(Layer.blockOver);
 
     //========================================
     // 外层双线
@@ -342,7 +342,21 @@ public void draw(){
         outerEndX - nx * offset,
         outerEndY - ny * offset
     );
-    
+
+    //========================================
+    // 内部主线
+    //========================================
+
+    Draw.color(innerColor);
+    Lines.stroke(4f);
+
+    Lines.line(
+        innerStartX,
+        innerStartY,
+        innerEndX,
+        innerEndY
+    );
+
     //========================================
     // 两端端帽
     //========================================
@@ -367,25 +381,10 @@ public void draw(){
     );
 
     //========================================
-    // 内部主线
-    //========================================
-
-    Draw.z(Layer.blockOver + 0.02);
-    Draw.color(innerColor);
-    Lines.stroke(4f);
-
-    Lines.line(
-        innerStartX,
-        innerStartY,
-        innerEndX,
-        innerEndY
-    );
-
-    //========================================
     // 流动箭头（未启用时静止）
     //========================================
 
-    Draw.z(Layer.blockOver + 0.01);
+    Draw.z(Layer.blockOver);
     float arrowLength = length - inset * 2f;
     int arrows = (int)(arrowLength / arrowSpacing);
 
@@ -420,17 +419,17 @@ float py = ty + uy * dist;
             float displayAlpha = (warmup > 0f) ? alpha * warmup : alpha;
             Draw.alpha(displayAlpha * Renderer.bridgeOpacity);
 
-            float size = 1.5f;
+            float size = 2.4f;
 
             Fill.tri(
                 px + Mathf.cos(rad) * size,
                 py + Mathf.sin(rad) * size,
 
-                px + Mathf.cos(rad + Mathf.PI * 0.25f) * size,
-                py + Mathf.sin(rad + Mathf.PI * 0.25f) * size,
+                px + Mathf.cos(rad + Mathf.PI * 0.5f) * size,
+                py + Mathf.sin(rad + Mathf.PI * 0.5f) * size,
 
-                px + Mathf.cos(rad - Mathf.PI * 0.25f) * size,
-                py + Mathf.sin(rad - Mathf.PI * 0.25f) * size
+                px + Mathf.cos(rad - Mathf.PI * 0.5f) * size,
+                py + Mathf.sin(rad - Mathf.PI * 0.5f) * size
             );
         }
     }
