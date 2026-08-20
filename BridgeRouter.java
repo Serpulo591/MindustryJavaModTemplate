@@ -47,7 +47,7 @@ public class BridgeRouter extends Block {
         unloadable = false;
         group = BlockGroup.transportation;
         noUpdateDisabled = true;
-        allowDiagonal = true;
+        allowDiagonal = false;
         copyConfig = false;
         allowConfigInventory = false;
         ignoreResizeConfig = true;
@@ -385,7 +385,7 @@ public void draw(){
     // 流动箭头（未启用时静止）
     //========================================
 
-    Draw.z(Layer.blockOver);
+    Draw.z(Layer.blockOver + 0.01);
     float arrowLength = length - inset * 2f;
     int arrows = (int)(arrowLength / arrowSpacing);
 
