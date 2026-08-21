@@ -311,9 +311,11 @@ public void updateTile(){
         return;
     }
 
+    float powerStatus = hasPower ? power.status : 1f;
+    
     warmup = Mathf.approachDelta(
         warmup,
-        1f,
+        powerStatus,
         1f / 30f
     );
 
