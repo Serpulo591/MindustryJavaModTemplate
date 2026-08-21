@@ -21,6 +21,7 @@ import mindustry.ui.Bar;
 import mindustry.type.*;
 import mindustry.world.*;
 import mindustry.world.meta.*;
+import example.world.meta.GlowStat;
 
 import static mindustry.Vars.*;
 
@@ -86,7 +87,7 @@ public class BridgeRouter extends Block {
         if(transportTime != 0f){
             stats.add(Stat.itemsMoved, 60f / transportTime, StatUnit.itemsSecond);
         }
-        stats.add(bridgeConnections, maxLinks, StatUnit.none, StatCat.crafting);
+        stats.add(GlowStat.bridgeConnections, maxLinks, StatUnit.none);
         stats.add(Stat.linkRange, range, StatUnit.blocks);
     }
 
