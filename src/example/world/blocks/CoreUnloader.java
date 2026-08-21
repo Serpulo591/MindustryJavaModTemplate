@@ -145,7 +145,7 @@ public class CoreUnloader extends Block {
         }
 
 private void drawInput(Tile other){
-    if(!linkValid(tile, other, false)) return;
+    if(!linkValid(other)) return;
 
     float tx = tile.drawx();
     float ty = tile.drawy();
@@ -157,38 +157,48 @@ private void drawInput(Tile other){
     Drawf.square(ox, oy, other.block().size * tilesize / 2f + 2f, Pal.accent);
 }
 
-        @Override
-        public void drawConfigure(){
-            Drawf.Circle(x, y, tilesize, Pal.accent);
-            Drawf.dashCircle(x, y, range * tilesize, Pal.accent);
-            int r = range + tilesize;
-            for(int dx = -r; dx <= r; dx++){
-                for(int dy = -r; dy <= r; dy++){
-                    if(dx == 0 && dy == 0) continue;
-                    if(dx*dx + dy*dy > r*r) continue;
-                    Tile other = tile.nearby(dx, dy);
-                    if(other == null) continue;
-                    if(linkValid(tile, other)){
-                        boolean linked = links.contains(other.pos());
-                        if(!linked && incoming.contains(other.pos())) continue;
-                        Drawf.select(other.drawx(), other.drawy(),
-                            other.block().size * tilesize / 2f + 2f + (linked ? 0f : Mathf.absin(Time.time, 4f, 1f)),
-                            linked ? Pal.place : Pal.breakInvalid);
-                    }
-                }
-            }
+@Override
+public void drawConfigure(){
+    Drawf.circles(x, y, 9f, Pal.accent);
+    Drawf.dashCircle(x, y, range * tilesize, Pal.accent);
 
-            for(int i = 0; i < links.size; i++){
-                Tile other = world.tile(links.get(i));
-                if(other != null) drawInput(other);
-            }
-            incoming.each(pos -> {
-                Tile other = world.tile(pos);
-                if(other != null) drawInput(other);
-            });
-
-            Draw.reset();
+    // 显示当前已连接的 Core
+    if(link != -1){
+        Tile other = world.tile(link);
+        if(other != null && linkValid(other)){
+            drawInput(other);
         }
+    }
+
+    // 显示范围内可以连接的 Core
+    int radius = (int)(range / tilesize) + 1;
+
+    for(int dx = -radius; dx <= radius; dx++){
+        for(int dy = -radius; dy <= radius; dy++){
+            Tile other = world.tile(tile.x + dx, tile.y + dy);
+
+            if(other == null || other.build == null) continue;
+            if(!(other.build instanceof CoreBlock.CoreBuild)) continue;
+            if(other.build.team != team) continue;
+            if(!linkValid(other)) continue;
+
+            // 已连接的不再画红色候选框
+            if(other.pos() == link){
+                continue;
+            }
+
+            Drawf.select(
+                other.drawx(),
+                other.drawy(),
+                other.block().size * tilesize / 2f + 2f +
+                    Mathf.absin(Time.time, 4f, 1f),
+                Pal.breakInvalid
+            );
+        }
+    }
+
+    Draw.reset();
+}
 
         @Override
         public void write(Writes write) {
