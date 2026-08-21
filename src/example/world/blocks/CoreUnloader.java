@@ -144,35 +144,50 @@ public class CoreUnloader extends Block {
             return true;
         }
 
-        @Override
-        public void draw() {
-            super.draw();
-            Tile other = world.tile(link);
-            if (linkValid(other)) {
-                Draw.color(Pal.accent);
-                Lines.stroke(2f);
-                Lines.line(x, y, other.drawx(), other.drawy());
-                Draw.reset();
-            }
-        }
+private void drawInput(Tile other){
+    if(!linkValid(tile, other, false)) return;
+
+    float tx = tile.drawx();
+    float ty = tile.drawy();
+    float ox = other.drawx();
+    float oy = other.drawy();
+
+    Drawf.dashLine(Pal.accent, tx, ty, ox, oy);
+
+    Drawf.square(ox, oy, other.block().size * tilesize / 2f + 2f, Pal.accent);
+}
 
         @Override
-        public void drawSelect() {
-            Tile linked = world.tile(link);
-            if (linkValid(linked)) {
-                Drawf.select(linked.drawx(), linked.drawy(),
-                    linked.block().size * tilesize / 2f + 2f, Pal.place);
-            }
-
-            for (int dx = -range; dx <= range; dx++) {
-                for (int dy = -range; dy <= range; dy++) {
-                    Tile t = world.tile(tile.x + dx, tile.y + dy);
-                    if (t != null && t.build instanceof CoreBlock.CoreBuild && t.build.team == team) {
-                        Drawf.select(t.drawx(), t.drawy(),
-                            t.block().size * tilesize / 2f + 2f, Pal.breakInvalid);
+        public void drawConfigure(){
+            Drawf.Circle(x, y, tilesize, Pal.accent);
+            Drawf.dashCircle(x, y, range * tilesize, Pal.accent);
+            int r = range + tilesize;
+            for(int dx = -r; dx <= r; dx++){
+                for(int dy = -r; dy <= r; dy++){
+                    if(dx == 0 && dy == 0) continue;
+                    if(dx*dx + dy*dy > r*r) continue;
+                    Tile other = tile.nearby(dx, dy);
+                    if(other == null) continue;
+                    if(linkValid(tile, other)){
+                        boolean linked = links.contains(other.pos());
+                        if(!linked && incoming.contains(other.pos())) continue;
+                        Drawf.select(other.drawx(), other.drawy(),
+                            other.block().size * tilesize / 2f + 2f + (linked ? 0f : Mathf.absin(Time.time, 4f, 1f)),
+                            linked ? Pal.place : Pal.breakInvalid);
                     }
                 }
             }
+
+            for(int i = 0; i < links.size; i++){
+                Tile other = world.tile(links.get(i));
+                if(other != null) drawInput(other);
+            }
+            incoming.each(pos -> {
+                Tile other = world.tile(pos);
+                if(other != null) drawInput(other);
+            });
+
+            Draw.reset();
         }
 
         @Override
