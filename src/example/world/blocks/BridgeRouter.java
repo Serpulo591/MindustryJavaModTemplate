@@ -27,7 +27,6 @@ import static mindustry.Vars.*;
 public class BridgeRouter extends Block {
     public final int timerCheckMoved = timers ++;
     public int range = 5;
-    public int transportIndex;
     public float transportTime = 1f;
     public float arrowSpacing = 4f, arrowPeriod = 0.4f;
     public float arrowTimeScl = 6.2f;
@@ -122,7 +121,7 @@ public class BridgeRouter extends Block {
     public class BridgeRouterBuild extends Building {
         // 主动连接列表（支持多个）
         public IntSeq links = new IntSeq();
-        // 被动连接列表（指向本建筑的其他桥）
+        public int transportIndex;
         public IntSeq incoming = new IntSeq(false, 4);
         public float warmup;
         public float time = -8f, timeSpeed;
@@ -241,97 +240,152 @@ public class BridgeRouter extends Block {
         }
 
         // ---------- 更新逻辑 ----------
-        @Override
-        public void updateTile(){
-            noSleep();
-            if(timer(timerCheckMoved, 30f)){
-                wasMoved = moved;
-                moved = false;
+@Override
+public void updateTile(){
+    noSleep();
+
+    if(timer(timerCheckMoved, 30f)){
+        wasMoved = moved;
+        moved = false;
+    }
+
+    timeSpeed = Mathf.approachDelta(
+        timeSpeed,
+        wasMoved ? 1f : 0f,
+        1f / 60f
+    );
+
+    time += timeSpeed * delta();
+
+    checkIncoming();
+
+    hadValidLink = false;
+
+    // 检查并清理无效连接
+    for(int i = 0; i < links.size; i++){
+        Tile other = world.tile(links.get(i));
+
+        if(!linkValid(tile, other)){
+            links.removeIndex(i);
+
+            if(transportIndex >= links.size){
+                transportIndex = 0;
             }
 
-            timeSpeed = Mathf.approachDelta(timeSpeed, wasMoved ? 1f : 0f, 1f / 60f);
-            time += timeSpeed * delta();
-            checkIncoming();
+            i--;
+            continue;
+        }
 
-            // 遍历所有主动连接，执行传输
-            hadValidLink = false;
-// 清理无效连接，并同步 incoming
-for(int i = 0; i < links.size; i++){
-    Tile other = world.tile(links.get(i));
+        hadValidLink = true;
 
-    if(!linkValid(tile, other)){
-        links.removeIndex(i);
-        i--;
-        continue;
+        BridgeRouterBuild target = (BridgeRouterBuild)other.build;
+
+        if(!target.incoming.contains(tile.pos())){
+            target.incoming.add(tile.pos());
+        }
     }
 
-    hadValidLink = true;
-
-    BridgeRouterBuild targetBuild = (BridgeRouterBuild)other.build;
-
-    if(!targetBuild.incoming.contains(tile.pos())){
-        targetBuild.incoming.add(tile.pos());
+    // 没有任何连接
+    if(!hadValidLink){
+        doDump();
+        warmup = 0f;
+        transportIndex = 0;
+        transportCounter = 0f;
+        return;
     }
-}
 
-if(hadValidLink){
-    warmup = Mathf.approachDelta(warmup, 1f, 1f / 30f);
+    warmup = Mathf.approachDelta(
+        warmup,
+        1f,
+        1f / 30f
+    );
 
-    // 保证索引不会越界
     if(transportIndex >= links.size){
         transportIndex = 0;
     }
 
-    // 当前应该发送到的目标
-    Tile other = world.tile(links.get(transportIndex));
-
-    if(other != null && linkValid(tile, other)){
-        if(updateTransport(other.build)){
-            // 成功发送后才进入下一个连接
-            transportIndex++;
-            if(transportIndex >= links.size){
-                transportIndex = 0;
-            }
-        }
-    }
-}else{
-    doDump();
-    warmup = 0f;
-    transportIndex = 0;
-}
-
-            if(!hadValidLink){
-                doDump();
-                warmup = 0f;
-            }
-        }
-
-        public void doDump(){
-            dumpAccumulate();
-        }
-
-        // ---------- 单次传输（对单个目标） ----------
-public boolean updateTransport(Building other){
+    // 累积运输时间
     transportCounter += edelta();
 
-    boolean movedItem = false;
-
     while(transportCounter >= transportTime){
-        Item item = items.take();
 
-        if(item != null && other.acceptItem(this, item)){
-            other.handleItem(this, item);
-            moved = true;
-            movedItem = true;
-        }else if(item != null){
-            items.add(item, 1);
-            items.undoFlow(item);
+        if(links.isEmpty()){
+            transportIndex = 0;
+            break;
         }
 
-        transportCounter -= transportTime;
-    }
+        // 当前物品
+        Item item = items.take();
 
-    return movedItem;
+        // 没有物品
+        if(item == null){
+            break;
+        }
+
+        boolean sent = false;
+
+        /*
+         * 从 transportIndex 开始，
+         * 按连接顺序寻找可以接受物品的目标。
+         *
+         * 例如：
+         * transportIndex = 1
+         *
+         * links = [B, C, D]
+         *
+         * 就会尝试：
+         * C → D → B
+         */
+        for(int offset = 0; offset < links.size; offset++){
+
+            int index = (transportIndex + offset) % links.size;
+
+            Tile targetTile = world.tile(links.get(index));
+
+            // 连接失效，跳过
+            if(targetTile == null || !linkValid(tile, targetTile)){
+                continue;
+            }
+
+            Building target = targetTile.build;
+
+            // 目标可以接收
+            if(target.acceptItem(this, item)){
+
+                target.handleItem(this, item);
+
+                moved = true;
+                sent = true;
+
+                /*
+                 * 成功发送后，
+                 * 下一件物品从下一个连接开始。
+                 */
+                transportIndex = index + 1;
+
+                if(transportIndex >= links.size){
+                    transportIndex = 0;
+                }
+
+                break;
+            }
+        }
+
+        if(sent){
+            transportCounter -= transportTime;
+        }else{
+            /*
+             * 所有连接都不能接受。
+             *
+             * 把物品放回库存，
+             * 下一次继续从当前 transportIndex 尝试。
+             */
+            items.add(item, 1);
+            items.undoFlow(item);
+
+            break;
+        }
+    }
 }
 
         // ---------- 绘制主连接（遍历所有连接） ----------
@@ -427,19 +481,32 @@ public boolean updateTransport(Building other){
         // ---------- 物品接受 ----------
 @Override
 public boolean acceptItem(Building source, Item item){
-    if(source == this || !hasItems || team != source.team || items.total() >= itemCapacity){
+    if(source == this ||
+       !hasItems ||
+       team != source.team ||
+       items.total() >= itemCapacity){
         return false;
     }
 
-    // 桥之间已经建立了主动连接
+    // 其他 BridgeRouter 主动连接到我
     if(source instanceof BridgeRouterBuild bridge){
         return bridge.links.contains(tile.pos());
     }
 
+    // 没有输出连接时，不接受普通输入
+    if(links.isEmpty()){
+        return false;
+    }
+
     // 普通运输建筑输入
-    if(!links.isEmpty()){
-        Tile target = world.tile(links.get(0));
-        return target != null && checkAccept(source, target);
+    for(int i = 0; i < links.size; i++){
+        Tile target = world.tile(links.get(i));
+
+        if(target != null &&
+           linkValid(tile, target) &&
+           checkAccept(source, target)){
+            return true;
+        }
     }
 
     return false;
