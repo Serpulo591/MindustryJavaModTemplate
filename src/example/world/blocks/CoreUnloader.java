@@ -67,7 +67,6 @@ public class CoreUnloader extends Block {
         public float transportCounter = 0f;
         public boolean hadValidLink;
 
-        // ----- 连接验证 -----
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
             Building b = other.build;
@@ -77,7 +76,6 @@ public class CoreUnloader extends Block {
             return dx * dx + dy * dy <= range * range;
         }
 
-        // ----- 更新循环 -----
         @Override
         public void updateTile() {
             Tile other = world.tile(link);
@@ -89,18 +87,19 @@ public class CoreUnloader extends Block {
 
                 while (transportCounter >= transportTime) {
                     Item item = null;
-                    // 从核心取一种物品（优先取第一个存在的）
                     for (Item i : content.items()) {
                         if (core.items.has(i)) {
-                            item = core.items.take(i, 1);
-                            break;
+                            // 使用 remove 方法移除一个物品
+                            if (core.items.remove(i, 1) > 0) {
+                                item = i;
+                                break;
+                            }
                         }
                     }
                     if (item != null) {
                         items.add(item, 1);
-                        dumpAccumulate(); // 输出到相邻方块
+                        dumpAccumulate();
                     } else {
-                        // 核心无物品，重置计时器避免空转
                         transportCounter = 0f;
                         break;
                     }
@@ -111,18 +110,16 @@ public class CoreUnloader extends Block {
             }
         }
 
-        // ----- 物品交互（只出不进） -----
         @Override
         public boolean acceptItem(Building source, Item item) {
-            return false; // 不接受外部输入
+            return false;
         }
 
         @Override
         public boolean canDump(Building to, Item item) {
-            return true; // 可以向任何能接受的方块输出
+            return true;
         }
 
-        // ----- 配置（使用 configure 接收设置，config() 返回当前值） -----
         @Override
         public void configure(Object value) {
             if (value instanceof Integer) {
@@ -137,20 +134,18 @@ public class CoreUnloader extends Block {
             return link;
         }
 
-        // 点击配置时，若点击核心则自动链接
         @Override
         public boolean onConfigureBuildTapped(Building other) {
             if (other instanceof CoreBlock.CoreBuild && other.team == team) {
                 float dst = Mathf.dst(other.tileX(), other.tileY(), tileX(), tileY());
                 if (dst <= range) {
                     configure(other.pos());
-                    return false; // 阻止打开配置界面
+                    return false;
                 }
             }
-            return true; // 允许打开配置
+            return true;
         }
 
-        // ----- 图形绘制 -----
         @Override
         public void draw() {
             super.draw();
@@ -165,14 +160,12 @@ public class CoreUnloader extends Block {
 
         @Override
         public void drawSelect() {
-            // 高亮已链接的核心
             Tile linked = world.tile(link);
             if (linkValid(linked)) {
                 Drawf.select(linked.drawx(), linked.drawy(),
                     linked.block().size * tilesize / 2f + 2f, Pal.place);
             }
 
-            // 显示范围内所有可连接的核心（供选择）
             for (int dx = -range; dx <= range; dx++) {
                 for (int dy = -range; dy <= range; dy++) {
                     Tile t = world.tile(tile.x + dx, tile.y + dy);
@@ -184,7 +177,6 @@ public class CoreUnloader extends Block {
             }
         }
 
-        // ----- 存档读写 -----
         @Override
         public void write(Writes write) {
             super.write(write);
