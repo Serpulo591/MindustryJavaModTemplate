@@ -70,7 +70,7 @@ public class GlowBlocks {
             displayedSpeed = 28;
         }};
         
-        coreUnloader = new CoreUnloader("coreUnloader") {{
+        coreUnloader = new CoreUnloader("core-unloader") {{
             size = 2;
             health = 250;
             consumePower(10f);
