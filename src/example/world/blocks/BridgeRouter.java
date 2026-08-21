@@ -50,7 +50,7 @@ public class BridgeRouter extends Block {
         noUpdateDisabled = true;
         allowDiagonal = true;
         copyConfig = false;
-        allowConfigInventory = true;
+        allowConfigInventory = false;
         priority = TargetPriority.transport;
         delayLandingConfig = true;
 
@@ -259,11 +259,6 @@ public boolean onConfigureBuildTapped(Building other) {
                 idx ++;
             }
         }
-
-@Override
-public boolean allowConfigInventory(){
-    return !links.isEmpty();
-}
 
 @Override
 public void updateTile(){
