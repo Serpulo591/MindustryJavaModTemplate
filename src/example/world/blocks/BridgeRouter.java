@@ -480,18 +480,22 @@ public boolean acceptItem(Building source, Item item){
         return false;
     }
 
+    // 没有连接时，禁止任何输入，包括玩家手动输入
     if(links.isEmpty()){
         return false;
     }
 
+    // 玩家手动输入
     if(source == this){
         return true;
     }
 
+    // BridgeRouter -> BridgeRouter
     if(source instanceof BridgeRouterBuild bridge){
         return bridge.links.contains(tile.pos());
     }
 
+    // 其他建筑输入
     for(int i = 0; i < links.size; i++){
         Tile target = world.tile(links.get(i));
 
