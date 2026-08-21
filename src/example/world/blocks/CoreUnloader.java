@@ -79,6 +79,11 @@ public class CoreUnloader extends Block {
 
 @Override
 public void updateTile(){
+    if(efficiency <= 0f){
+        transportCounter = 0f;
+        return;
+    }
+
     if(link == -1){
         transportCounter = 0f;
         return;
