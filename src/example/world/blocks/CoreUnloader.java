@@ -133,17 +133,24 @@ public class CoreUnloader extends Block {
             return link;
         }
 
-        @Override
-        public boolean onConfigureBuildTapped(Building other) {
-            if (other instanceof CoreBlock.CoreBuild && other.team == team) {
-                float dst = Mathf.dst(other.tileX(), other.tileY(), tileX(), tileY());
-                if (dst <= range) {
-                    configure(other.pos());
-                    return false;
-                }
+@Override
+public boolean onConfigureBuildTapped(Building other){
+    if(other instanceof CoreBlock.CoreBuild && other.team == team){
+        if(dst(other) <= range){
+
+            // 再次点击当前连接的 Core -> 取消连接
+            if(link == other.pos()){
+                configure(-1);
+            }else{
+                configure(other.pos());
             }
-            return true;
+
+            return false;
         }
+    }
+
+    return true;
+}
 
 private void drawInput(Tile other){
     if(!linkValid(other)) return;
@@ -161,42 +168,33 @@ private void drawInput(Tile other){
 @Override
 public void drawConfigure(){
     Drawf.circles(x, y, 9f, Pal.accent);
-    Drawf.dashCircle(x, y, range * tilesize, Pal.accent);
+    Drawf.dashCircle(x, y, range, Pal.accent);
 
-    // 显示当前已连接的 Core
+    // 已连接的 Core
     if(link != -1){
         Tile other = world.tile(link);
+
         if(other != null && linkValid(other)){
             drawInput(other);
         }
     }
 
-    // 显示范围内可以连接的 Core
-    int radius = (int)(range / tilesize) + 1;
+    // 范围内所有可以连接的 Core
+    Groups.build.each(b -> {
+        if(!(b instanceof CoreBlock.CoreBuild)) return;
+        if(b.team != team) return;
+        if(!within(b, range)) return;
 
-    for(int dx = -radius; dx <= radius; dx++){
-        for(int dy = -radius; dy <= radius; dy++){
-            Tile other = world.tile(tile.x + dx, tile.y + dy);
+        // 当前连接的 Core 不画候选框
+        if(b.pos() == link) return;
 
-            if(other == null || other.build == null) continue;
-            if(!(other.build instanceof CoreBlock.CoreBuild)) continue;
-            if(other.build.team != team) continue;
-            if(!linkValid(other)) continue;
-
-            // 已连接的不再画红色候选框
-            if(other.pos() == link){
-                continue;
-            }
-
-            Drawf.select(
-                other.drawx(),
-                other.drawy(),
-                other.block().size * tilesize / 2f + 2f +
-                    Mathf.absin(Time.time, 4f, 1f),
-                Pal.breakInvalid
-            );
-        }
-    }
+        Drawf.select(
+            b.x,
+            b.y,
+            b.block.size * tilesize / 2f + 2f,
+            Pal.breakInvalid
+        );
+    });
 
     Draw.reset();
 }
