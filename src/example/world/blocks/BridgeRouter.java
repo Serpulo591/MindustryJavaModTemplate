@@ -210,24 +210,37 @@ public class BridgeRouter extends Block {
         }
 
         // ---------- 配置点击交互 ----------
-        @Override
-        public boolean onConfigureBuildTapped(Building other) {
-            if(other == this){
-                links.clear();  // 点击自身清空所有连接
-                return false;
-            }
+@Override
+public boolean onConfigureBuildTapped(Building other) {
+    if(other == this){
+        links.clear();
+        return false;
+    }
 
-            if(other instanceof BridgeRouterBuild b && linkValid(tile, other.tile)){
-                int pos = other.pos();
-                if(links.contains(pos)){
-                    links.removeValue(pos);  // 已连接则移除
-                }else{
-                    links.add(pos);          // 未连接则添加
-                }
-                return false;
-            }
-            return true;
+    if(other instanceof BridgeRouterBuild b && linkValid(tile, other.tile)){
+
+        int myPos = tile.pos();
+        int otherPos = other.tile.pos();
+
+        // 如果对方已经连接到我，
+        // 先清除对方 → 我的连接
+        if(b.links.contains(myPos)){
+            b.links.removeValue(myPos);
         }
+
+        // 我已经连接到对方 → 取消连接
+        if(links.contains(otherPos)){
+            links.removeValue(otherPos);
+        }else{
+            // 建立我 → 对方
+            links.add(otherPos);
+        }
+
+        return false;
+    }
+
+    return true;
+}
 
         // ---------- 清理 incoming ----------
         public void checkIncoming(){
