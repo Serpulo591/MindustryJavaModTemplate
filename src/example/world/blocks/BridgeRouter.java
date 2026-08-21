@@ -78,6 +78,10 @@ public class BridgeRouter extends Block {
             }
         });
     }
+    
+    public void doDump(){
+        dumpAccumulate();
+    }
 
     @Override
     public void setStats() {
