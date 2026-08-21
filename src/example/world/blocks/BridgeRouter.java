@@ -495,7 +495,7 @@ public boolean acceptItem(Building source, Item item){
     }
 
     // 本建筑有主动连接，检查是否有目标可以接收物品（转发）
-    for(int i = 0; i < links.size(); i++){
+    for(int i = 0; i < links.size; i++){
         Tile target = world.tile(links.get(i));
         if(target != null &&
            linkValid(tile, target) &&
