@@ -474,7 +474,7 @@ public void updateTile(){
 
 @Override
 public boolean acceptItem(Building source, Item item){
-    // 基本检查：不能是自己、必须能存物品、同队、容量未满
+    // 基础检查
     if(source == this ||
        !hasItems ||
        team != source.team ||
@@ -482,13 +482,29 @@ public boolean acceptItem(Building source, Item item){
         return false;
     }
 
-    // 如果来源是另一个 BridgeRouter，则只有它主动连接了我才接受
+    // 如果来源是另一个 BridgeRouter
     if(source instanceof BridgeRouterBuild bridge){
+        // 只有当对方主动连接了我时，才接受物品
         return bridge.links.contains(tile.pos());
     }
 
-    // 对于玩家、传送带等普通来源，只有当本建筑有主动连接时才接受
-    return !links.isEmpty();
+    // 对于非桥来源（传送带、工厂等）：
+    // 如果本建筑没有任何主动连接，则拒绝所有外部输入
+    if(links.isEmpty()){
+        return false;
+    }
+
+    // 本建筑有主动连接，检查是否有目标可以接收物品（转发）
+    for(int i = 0; i < links.size(); i++){
+        Tile target = world.tile(links.get(i));
+        if(target != null &&
+           linkValid(tile, target) &&
+           checkAccept(source, target)){
+            return true;
+        }
+    }
+
+    return false;
 }
 
         protected boolean checkAccept(Building source, Tile link){
