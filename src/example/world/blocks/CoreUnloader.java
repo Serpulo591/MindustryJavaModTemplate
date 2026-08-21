@@ -130,8 +130,14 @@ public void updateTile(){
 
 @Override
 public void configure(Object value){
-    if(value instanceof Integer i){
-        link = i;
+    if(value instanceof Integer i && i >= 0){
+        Tile other = world.tile(i);
+
+        if(other != null && linkValid(other)){
+            link = i;
+        }else{
+            link = -1;
+        }
     }else{
         link = -1;
     }
