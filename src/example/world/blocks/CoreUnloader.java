@@ -88,7 +88,8 @@ public class CoreUnloader extends Block {
                 while (transportCounter >= transportTime) {
                     Item item = null;
                     for (Item i : content.items()) {
-                        if (core.items.take(i) > 0) {
+                        if (core.items.has(i)) {
+                            core.items.remove(i, 1);
                             item = i;
                             break;
                         }
