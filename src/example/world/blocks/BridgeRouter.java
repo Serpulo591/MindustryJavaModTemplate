@@ -42,7 +42,6 @@ public class BridgeRouter extends Block {
         update = true;
         solid = true;
         underBullets = true;
-        hasPower = true;
         itemCapacity = 10;
         configurable = true;
         hasItems = true;
@@ -52,7 +51,6 @@ public class BridgeRouter extends Block {
         allowDiagonal = true;
         copyConfig = false;
         allowConfigInventory = false;
-        ignoreResizeConfig = true;
         priority = TargetPriority.transport;
         delayLandingConfig = true;
 
@@ -85,7 +83,7 @@ public class BridgeRouter extends Block {
     public void setStats() {
         super.setStats();
         if(transportTime != 0f){
-            stats.add(Stat.itemsMoved, 60f / transportTime, StatUnit.itemsSecond);
+            stats.add(Stat.itemsMoved, 30f / transportTime, StatUnit.itemsSecond);
         }
         stats.add(GlowStat.bridgeConnections, maxLinks, StatUnit.none);
         stats.add(Stat.linkRange, range, StatUnit.blocks);
@@ -121,9 +119,7 @@ public class BridgeRouter extends Block {
         updateClipRadius((range + 0.5f) * tilesize);
     }
 
-    // ==================== 内部类 ====================
     public class BridgeRouterBuild extends Building {
-        // 主动连接列表（支持多个）
         public IntSeq links = new IntSeq();
         public int transportIndex;
         public IntSeq incoming = new IntSeq(false, 4);
@@ -137,7 +133,6 @@ public class BridgeRouter extends Block {
             links.clear();
         }
 
-        // ---------- 绘制单条桥间线（配置模式用） ----------
         private void drawInput(Tile other) {
             if (!linkValid(tile, other, false)) return;
             boolean linked = links.contains(other.pos());
@@ -171,7 +166,6 @@ public class BridgeRouter extends Block {
             Draw.mixcol();
         }
 
-        // ---------- 配置模式绘制 ----------
         @Override
         public void drawConfigure(){
             Drawf.select(x, y, tile.block().size * tilesize / 2f + 2f, Pal.accent);
@@ -186,7 +180,6 @@ public class BridgeRouter extends Block {
                     if(other == null) continue;
                     if(linkValid(tile, other)){
                         boolean linked = links.contains(other.pos());
-                        // 如果其他建筑指向本建筑但本建筑未主动连接，跳过显示（避免干扰）
                         if(!linked && incoming.contains(other.pos())) continue;
                         Drawf.select(other.drawx(), other.drawy(),
                             other.block().size * tilesize / 2f + 2f + (linked ? 0f : Mathf.absin(Time.time, 4f, 1f)),
@@ -195,12 +188,10 @@ public class BridgeRouter extends Block {
                 }
             }
 
-            // 绘制所有已连接的桥间线
             for(int i = 0; i < links.size; i++){
                 Tile other = world.tile(links.get(i));
                 if(other != null) drawInput(other);
             }
-            // 绘制所有被动连接的桥间线
             incoming.each(pos -> {
                 Tile other = world.tile(pos);
                 if(other != null) drawInput(other);
@@ -213,7 +204,6 @@ public class BridgeRouter extends Block {
             dumpAccumulate();
         }
 
-        // ---------- 配置点击交互 ----------
 @Override
 public boolean onConfigureBuildTapped(Building other) {
     if(other == this){
@@ -227,7 +217,6 @@ public boolean onConfigureBuildTapped(Building other) {
         int myPos = tile.pos();
         int otherPos = other.tile.pos();
 
-        // 已经连接 → 取消连接
         if(links.contains(otherPos)){
             links.removeValue(otherPos);
 
@@ -238,12 +227,10 @@ public boolean onConfigureBuildTapped(Building other) {
             return false;
         }
 
-        // 新增连接前检查数量上限
         if(links.size >= maxLinks){
             return false;
         }
 
-        // 对方已经连接到我 → 清除对方的反向连接
         if(b.links.contains(myPos)){
             b.links.removeValue(myPos);
 
@@ -252,7 +239,6 @@ public boolean onConfigureBuildTapped(Building other) {
             }
         }
 
-        // 建立我 → 对方
         links.add(otherPos);
 
         return false;
@@ -261,7 +247,6 @@ public boolean onConfigureBuildTapped(Building other) {
     return true;
 }
 
-        // ---------- 清理 incoming ----------
         public void checkIncoming(){
             int idx = 0;
             while(idx < incoming.size){
@@ -275,7 +260,6 @@ public boolean onConfigureBuildTapped(Building other) {
             }
         }
 
-        // ---------- 更新逻辑 ----------
 @Override
 public void updateTile(){
     noSleep();
@@ -297,7 +281,6 @@ public void updateTile(){
 
     hadValidLink = false;
 
-    // 检查并清理无效连接
     for(int i = 0; i < links.size; i++){
         Tile other = world.tile(links.get(i));
 
@@ -321,7 +304,6 @@ public void updateTile(){
         }
     }
 
-    // 没有任何连接
     if(!hadValidLink){
         doDump();
         warmup = 0f;
@@ -347,7 +329,6 @@ public void updateTile(){
         transportIndex = 0;
     }
 
-    // 累积运输时间
     transportCounter += edelta();
 
     while(transportCounter >= transportTime){
@@ -357,42 +338,26 @@ public void updateTile(){
             break;
         }
 
-        // 当前物品
         Item item = items.take();
 
-        // 没有物品
         if(item == null){
             break;
         }
 
         boolean sent = false;
 
-        /*
-         * 从 transportIndex 开始，
-         * 按连接顺序寻找可以接受物品的目标。
-         *
-         * 例如：
-         * transportIndex = 1
-         *
-         * links = [B, C, D]
-         *
-         * 就会尝试：
-         * C → D → B
-         */
         for(int offset = 0; offset < links.size; offset++){
 
             int index = (transportIndex + offset) % links.size;
 
             Tile targetTile = world.tile(links.get(index));
 
-            // 连接失效，跳过
             if(targetTile == null || !linkValid(tile, targetTile)){
                 continue;
             }
 
             Building target = targetTile.build;
 
-            // 目标可以接收
             if(target.acceptItem(this, item)){
 
                 target.handleItem(this, item);
@@ -400,10 +365,6 @@ public void updateTile(){
                 moved = true;
                 sent = true;
 
-                /*
-                 * 成功发送后，
-                 * 下一件物品从下一个连接开始。
-                 */
                 transportIndex = index + 1;
 
                 if(transportIndex >= links.size){
@@ -417,12 +378,6 @@ public void updateTile(){
         if(sent){
             transportCounter -= transportTime;
         }else{
-            /*
-             * 所有连接都不能接受。
-             *
-             * 把物品放回库存，
-             * 下一次继续从当前 transportIndex 尝试。
-             */
             items.add(item, 1);
             items.undoFlow(item);
 
@@ -431,7 +386,6 @@ public void updateTile(){
     }
 }
 
-        // ---------- 绘制主连接（遍历所有连接） ----------
         @Override
         public void draw(){
             super.draw();
@@ -444,7 +398,6 @@ public void updateTile(){
             }
         }
 
-        // ---------- 绘制单条连接（抽取出独立方法） ----------
         private void drawConnection(Tile other){
             if(Mathf.zero(Renderer.bridgeOpacity)) return;
 
@@ -483,7 +436,6 @@ public void updateTile(){
             Lines.line(outerStartX - nx * offset, outerStartY - ny * offset,
                        outerEndX - nx * offset, outerEndY - ny * offset);
 
-            // 端帽
             Lines.line(outerStartX + nx * offset, outerStartY + ny * offset,
                        outerStartX - nx * offset, outerStartY - ny * offset);
             Lines.line(outerEndX + nx * offset, outerEndY + ny * offset,
@@ -494,7 +446,6 @@ public void updateTile(){
             Lines.stroke(4f);
             Lines.line(innerStartX, innerStartY, innerEndX, innerEndY);
 
-            // 箭头
             Draw.z(Layer.blockOver + 0.01f);
             float arrowLength = length - inset * 2f;
             int arrows = (int)(arrowLength / arrowSpacing);
@@ -521,7 +472,6 @@ public void updateTile(){
             }
         }
 
-        // ---------- 物品接受 ----------
 @Override
 public boolean acceptItem(Building source, Item item){
     if(source == this ||
@@ -531,17 +481,14 @@ public boolean acceptItem(Building source, Item item){
         return false;
     }
 
-    // 其他 BridgeRouter 主动连接到我
     if(source instanceof BridgeRouterBuild bridge){
         return bridge.links.contains(tile.pos());
     }
 
-    // 没有输出连接时，不接受普通输入
     if(links.isEmpty()){
         return false;
     }
 
-    // 普通运输建筑输入
     for(int i = 0; i < links.size; i++){
         Tile target = world.tile(links.get(i));
 
@@ -571,7 +518,6 @@ public boolean acceptItem(Building source, Item item){
             return source instanceof BridgeRouterBuild && linkValid(source.tile, tile) && ((BridgeRouterBuild)source).links.contains(tile.pos());
         }
 
-        // ---------- 倾倒 ----------
         @Override
         public boolean canDump(Building to, Item item){
             return checkDump(to);
@@ -603,7 +549,6 @@ public boolean acceptItem(Building source, Item item){
             return hadValidLink && enabled;
         }
 
-        // ---------- 配置/存档 ----------
         @Override
         public Point2 config(){
             if(links.size > 0){
@@ -643,7 +588,6 @@ public boolean acceptItem(Building source, Item item){
                     links.add(read.i());
                 }
             }else{
-                // 旧版本单连接兼容
                 int oldLink = read.i();
                 if(oldLink != -1) links.add(oldLink);
             }
