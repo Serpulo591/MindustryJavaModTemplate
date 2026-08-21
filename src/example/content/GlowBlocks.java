@@ -2,6 +2,7 @@ package example.content;
 
 import example.world.blocks.BridgeRouter;
 import example.world.blocks.ManualDrill;
+import example.world.blocks.CoreUnloader;   // 新增导入
 import arc.graphics.*;
 import arc.math.*;
 import arc.struct.*;
@@ -48,6 +49,7 @@ public class GlowBlocks {
     public static Block
         conveyor1,
         highCarbonConveyor,
+        coreUnloader,    // 新增变量
         warpBridge,
         vectorDrill;
 
@@ -72,7 +74,7 @@ public class GlowBlocks {
             size = 2;
             health = 250;
             consumePower(10f);
-            requirements(Category.distribution, ItemStack.with(Items.cobalt, 60, Items.tungsten, 40));
+            requirements(Category.distribution, ItemStack.with(GlowItems.cobalt, 60, GlowItems.tungsten, 40)); // 使用 GlowItems
         }};
 
         warpBridge = new BridgeRouter("warp-bridge") {{
@@ -80,7 +82,7 @@ public class GlowBlocks {
             health = 90;
             itemCapacity = 10;
             consumePower(0.4f);
-            requirements(Category.distribution, with(GlowItems.cobalt, 12, Items.tungsten, 8));
+            requirements(Category.distribution, with(GlowItems.cobalt, 12, GlowItems.tungsten, 8));
         }};
         
         vectorDrill = new ManualDrill("vector-drill") {{
@@ -93,7 +95,7 @@ public class GlowBlocks {
             warmupSpeed = 30f;
             itemCapacity = 10;
             liquidCapacity = 38f;
-            requirements(Category.production, with(GlowItems.cobalt, 12, Items.tungsten, 8));
+            requirements(Category.production, with(GlowItems.cobalt, 12, GlowItems.tungsten, 8));
             consumePower(0.5f);
             consumeLiquid(Liquids.water, 0.065f).boost();
         }};
