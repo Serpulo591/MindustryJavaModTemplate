@@ -50,7 +50,7 @@ public class BridgeRouter extends Block {
         noUpdateDisabled = true;
         allowDiagonal = true;
         copyConfig = false;
-        allowConfigInventory = false;
+        allowConfigInventory = true;
         priority = TargetPriority.transport;
         delayLandingConfig = true;
 
@@ -261,6 +261,11 @@ public boolean onConfigureBuildTapped(Building other) {
         }
 
 @Override
+public boolean allowConfigInventory(){
+    return !links.isEmpty();
+}
+
+@Override
 public void updateTile(){
     noSleep();
 
@@ -328,6 +333,35 @@ public void updateTile(){
     if(transportIndex >= links.size){
         transportIndex = 0;
     }
+
+    transportCounter += edelta();
+
+while(transportCounter >= transportTime){
+    if(items.total() >= itemCapacity){
+        transportCounter = 0f;
+        break;
+    }
+
+    Item item = null;
+
+    for(Item i : content.items()){
+        if(core.items.has(i)){
+            item = i;
+            break;
+        }
+    }
+
+    if(item == null){
+        transportCounter = 0f;
+        break;
+    }
+
+    core.items.remove(item, 1);
+    items.add(item, 1);
+    dumpAccumulate();
+
+    transportCounter -= transportTime;
+}
 }
 
         @Override
@@ -418,12 +452,11 @@ public void updateTile(){
 
 @Override
 public boolean acceptItem(Building source, Item item){
-    if(!hasItems || items.total() >= itemCapacity){
+    if(source == this ||
+       !hasItems ||
+       team != source.team ||
+       items.total() >= itemCapacity){
         return false;
-    }
-
-    if(source == this){
-        return !links.isEmpty();
     }
 
     if(source instanceof BridgeRouterBuild bridge){
