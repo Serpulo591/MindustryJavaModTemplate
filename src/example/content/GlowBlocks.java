@@ -73,7 +73,7 @@ public class GlowBlocks {
             health = 250;
             consumePower(10f);
             requirements(Category.distribution, ItemStack.with(Items.cobalt, 60, Items.tungsten, 40));
-        }
+        }};
 
         warpBridge = new BridgeRouter("warp-bridge") {{
             size = 1;
