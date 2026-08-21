@@ -63,22 +63,25 @@ public class GlowBlocks {
 
         highCarbonConveyor = new Conveyor("high-carbon-conveyor") {{
             requirements(Category.distribution, with(GlowItems.cobalt, 3, Items.titanium, 2, GlowItems.highCarbonAlloy, 2));
-            health = 400;
+            health = 120;
             speed = 0.2036363636f;
             displayedSpeed = 28;
         }};
+        
+        coreUnloader = new CoreUnloader("coreUnloader") {{
+            size = 2;
+            health = 250;
+            consumePower(10f);
+            requirements(Category.distribution, ItemStack.with(Items.cobalt, 60, Items.tungsten, 40));
+        }
 
         warpBridge = new BridgeRouter("warp-bridge") {{
             size = 1;
-            health = 350;
-            hasItems = true;
-            hasPower = true;
+            health = 90;
             itemCapacity = 10;
             consumePower(0.4f);
             requirements(Category.distribution, with(GlowItems.cobalt, 12, Items.tungsten, 8));
         }};
-        
-        //占位符
         
         vectorDrill = new ManualDrill("vector-drill") {{
             researchCostMultiplier = 0.1f;
