@@ -480,19 +480,16 @@ public boolean acceptItem(Building source, Item item){
         return false;
     }
 
-    // 玩家手动输入
+    if(links.isEmpty()){
+        return false;
+    }
+
     if(source == this){
         return true;
     }
 
-    // BridgeRouter -> BridgeRouter
     if(source instanceof BridgeRouterBuild bridge){
         return bridge.links.contains(tile.pos());
-    }
-
-    // 其他建筑输入
-    if(links.isEmpty()){
-        return false;
     }
 
     for(int i = 0; i < links.size; i++){
