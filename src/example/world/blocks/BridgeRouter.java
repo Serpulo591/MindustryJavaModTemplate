@@ -45,12 +45,13 @@ public class BridgeRouter extends Block {
         itemCapacity = 10;
         configurable = true;
         hasItems = true;
+        allowResupply = true;
         unloadable = false;
         group = BlockGroup.transportation;
         noUpdateDisabled = true;
         allowDiagonal = true;
         copyConfig = false;
-        allowConfigInventory = true;
+        allowConfigInventory = false;
         priority = TargetPriority.transport;
         delayLandingConfig = true;
 
