@@ -1,5 +1,6 @@
 package example.world.blocks;
 
+import arc.Core;
 import arc.func.*;
 import arc.graphics.*;
 import arc.graphics.g2d.*;
@@ -77,15 +78,18 @@ public class BridgeRouter extends Block {
         });
     }
 
-    @Override
-    public void setBars() {
-        super.setBars();
-        addBar("connections", entity -> new Bar(() ->
-        Core.bundle.format("bar.powerlines", entity.power.links.size, maxLinks),
+@Override
+public void setBars() {
+    super.setBars();
+    addBar("connections", entity -> {
+        BridgeRouterBuild build = (BridgeRouterBuild)entity;
+        return new Bar(
+            () -> Core.bundle.format("bar.powerlines", build.links.size, maxLinks),
             () -> Pal.items,
-            () -> (float)entity.links.size / (float)maxLinks
-        ));
-    }
+            () -> (float)build.links.size / (float)maxLinks
+        );
+    });
+}
 
     @Override
     public void setStats() {
