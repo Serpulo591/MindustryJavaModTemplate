@@ -54,7 +54,6 @@ public class BridgeRouter extends Block {
         priority = TargetPriority.transport;
         delayLandingConfig = true;
 
-        // 单连接配置（兼容旧版）
         config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> {
             tile.links.clear();
             tile.links.add(Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
@@ -67,7 +66,6 @@ public class BridgeRouter extends Block {
                 tile.links.add(i);
             }
         });
-        // 多连接配置（用于蓝图/批量）
         config(IntSeq.class, (BridgeRouterBuild tile, IntSeq seq) -> {
             tile.links.clear();
             for(int j = 0; j < seq.size; j += 2){
@@ -77,6 +75,16 @@ public class BridgeRouter extends Block {
                 tile.links.add(pos);
             }
         });
+    }
+
+    @Override
+    public void setBars() {
+        super.setBars();
+        addBar("connections", entity -> new Bar(() ->
+        Core.bundle.format("bar.powerlines", entity.power.links.size, maxLinks),
+            () -> Pal.items,
+            () -> (float)entity.links.size / (float)maxLinks
+        ));
     }
 
     @Override
@@ -481,12 +489,10 @@ public boolean acceptItem(Building source, Item item){
 }
 
 protected boolean checkAccept(Building source){
-    // BridgeRouter -> BridgeRouter
     if(linked(source)){
         return true;
     }
 
-    // 没有主动连接，禁止手动输入和普通建筑输入
     if(links.isEmpty()){
         return false;
     }
