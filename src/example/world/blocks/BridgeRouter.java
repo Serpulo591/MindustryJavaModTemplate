@@ -474,55 +474,39 @@ public void updateTile(){
 
 @Override
 public boolean acceptItem(Building source, Item item){
-    if(!hasItems ||
-       team != source.team ||
-       items.total() >= itemCapacity){
-        return false;
-    }
+    return hasItems
+        && team == source.team
+        && items.total() < itemCapacity
+        && checkAccept(source);
+}
 
-    // 玩家手动输入
-    if(source == this){
-        return !links.isEmpty();
-    }
-
+protected boolean checkAccept(Building source){
     // BridgeRouter -> BridgeRouter
-    if(source instanceof BridgeRouterBuild bridge){
-        return !links.isEmpty() &&
-               bridge.links.contains(tile.pos());
+    if(linked(source)){
+        return true;
     }
 
-    // 没有连接，不接受其他建筑输入
+    // 没有主动连接，禁止手动输入和普通建筑输入
     if(links.isEmpty()){
         return false;
     }
 
-    // 其他建筑输入
     for(int i = 0; i < links.size; i++){
-        Tile target = world.build(links.get(i)) != null
-            ? world.build(links.get(i)).tile
-            : null;
+        Tile target = world.tile(links.get(i));
 
-        if(target != null &&
-           linkValid(tile, target) &&
-           checkAccept(source, target)){
-            return true;
+        if(target != null && linkValid(tile, target)){
+            int rel = relativeTo(target);
+            var facing = Edges.getFacingEdge(source, this);
+            int rel2 = facing == null ? -1 : relativeTo(facing);
+
+            if(rel != rel2){
+                return true;
+            }
         }
     }
 
     return false;
 }
-
-        protected boolean checkAccept(Building source, Tile link){
-            if(tile == null || linked(source)) return true;
-
-            if(linkValid(tile, link)){
-                int rel = relativeTo(link);
-                var facing = Edges.getFacingEdge(source, this);
-                int rel2 = facing == null ? -1 : relativeTo(facing);
-                return rel != rel2;
-            }
-            return false;
-        }
 
         protected boolean linked(Building source){
             return source instanceof BridgeRouterBuild && linkValid(source.tile, tile) && ((BridgeRouterBuild)source).links.contains(tile.pos());
