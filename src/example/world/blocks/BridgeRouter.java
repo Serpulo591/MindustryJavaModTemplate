@@ -84,8 +84,9 @@ public class BridgeRouter extends Block {
     public void setStats() {
         super.setStats();
         if(transportTime != 0f){
-            stats.add(Stat.itemsMoved, 10f / transportTime, StatUnit.itemsSecond);
+            stats.add(Stat.itemsMoved, 60f / transportTime, StatUnit.itemsSecond);
         }
+        stats.add(Stat.powerConnections, maxLinks, StatUnit.none);
     }
 
     @Override
