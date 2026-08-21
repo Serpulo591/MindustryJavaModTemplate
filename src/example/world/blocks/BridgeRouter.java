@@ -45,7 +45,6 @@ public class BridgeRouter extends Block {
         itemCapacity = 10;
         configurable = true;
         hasItems = true;
-        allowResupply = true;
         unloadable = false;
         group = BlockGroup.transportation;
         noUpdateDisabled = true;
@@ -475,29 +474,30 @@ public void updateTile(){
 
 @Override
 public boolean acceptItem(Building source, Item item){
-    // 基础检查
-    if(source == this ||
-       !hasItems ||
+    if(!hasItems ||
        team != source.team ||
        items.total() >= itemCapacity){
         return false;
     }
 
-    // 如果来源是另一个 BridgeRouter
+    // 玩家手动输入
+    if(source == this){
+        return true;
+    }
+
+    // BridgeRouter -> BridgeRouter
     if(source instanceof BridgeRouterBuild bridge){
-        // 只有当对方主动连接了我时，才接受物品
         return bridge.links.contains(tile.pos());
     }
 
-    // 对于非桥来源（传送带、工厂等）：
-    // 如果本建筑没有任何主动连接，则拒绝所有外部输入
+    // 其他建筑输入
     if(links.isEmpty()){
         return false;
     }
 
-    // 本建筑有主动连接，检查是否有目标可以接收物品（转发）
     for(int i = 0; i < links.size; i++){
         Tile target = world.tile(links.get(i));
+
         if(target != null &&
            linkValid(tile, target) &&
            checkAccept(source, target)){
