@@ -35,6 +35,8 @@ public class BridgeRouter extends Block {
     private static final Color POWER_LOSS_INNER_COLOR = Color.valueOf("#ec767838");
     private static final Color LINE_COLOR_OUTER = Color.valueOf("#c0edf4");
     private static final Color LINE_COLOR_INNER = Color.valueOf("#a1d7ec80");
+    public static final Stat bridgeConnections =
+    new Stat("bridgeConnections", StatCat.crafting);
 
     public BridgeRouter(String name){
         super(name);
@@ -86,7 +88,7 @@ public class BridgeRouter extends Block {
         if(transportTime != 0f){
             stats.add(Stat.itemsMoved, 60f / transportTime, StatUnit.itemsSecond);
         }
-        stats.add(Stat.powerConnections, maxLinks, StatUnit.none, StatCat.crafting);
+        stats.add(Stat.bridgeConnections, maxLinks, StatUnit.none);
         stats.add(Stat.linkRange, range, StatUnit.blocks);
     }
 
