@@ -89,6 +89,12 @@ public void updateTile(){
         return;
     }
 
+    // 自己已经满了，停止从 Core 提取
+    if(items.total() >= itemCapacity){
+        transportCounter = 0f;
+        return;
+    }
+
     Tile other = world.tile(link);
 
     if(!linkValid(other)){
@@ -101,25 +107,34 @@ public void updateTile(){
     transportCounter += delta();
 
     while(transportCounter >= transportTime){
+
+        // 每次提取前再次检查容量
+        if(items.total() >= itemCapacity){
+            transportCounter = 0f;
+            break;
+        }
+
         Item item = null;
 
         for(Item i : content.items()){
             if(core.items.has(i)){
-                core.items.remove(i, 1);
                 item = i;
                 break;
             }
         }
 
-        if(item != null){
-            items.add(item, 1);
-            dumpAccumulate();
-        }else{
+        if(item == null){
             transportCounter = 0f;
             break;
         }
 
+        // 先从 Core 移除，再加入本建筑
+        core.items.remove(item, 1);
+        items.add(item, 1);
+
         transportCounter -= transportTime;
+
+        dumpAccumulate();
     }
 }
 
