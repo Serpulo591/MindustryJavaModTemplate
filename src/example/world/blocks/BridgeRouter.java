@@ -310,7 +310,7 @@ public class BridgeRouter extends Block {
                             if(items.total() > 0){
                                 Item item = items.first();
                                 int amount = 1;
-                                if(target.items.total() < target.block.itemCapacity && target.acceptItem(this, item)){
+                                if(target.items.total() < target.itemCapacity && target.acceptItem(this, item)){
                                     target.handleItem(this, item);
                                     items.remove(item, amount);
                                     moved = true;
