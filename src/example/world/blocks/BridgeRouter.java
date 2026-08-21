@@ -474,6 +474,7 @@ public void updateTile(){
 
 @Override
 public boolean acceptItem(Building source, Item item){
+    // 基本检查：不能是自己、必须能存物品、同队、容量未满
     if(source == this ||
        !hasItems ||
        team != source.team ||
@@ -481,25 +482,13 @@ public boolean acceptItem(Building source, Item item){
         return false;
     }
 
+    // 如果来源是另一个 BridgeRouter，则只有它主动连接了我才接受
     if(source instanceof BridgeRouterBuild bridge){
         return bridge.links.contains(tile.pos());
     }
 
-    if(links.isEmpty()){
-        return false;
-    }
-
-    for(int i = 0; i < links.size; i++){
-        Tile target = world.tile(links.get(i));
-
-        if(target != null &&
-           linkValid(tile, target) &&
-           checkAccept(source, target)){
-            return true;
-        }
-    }
-
-    return false;
+    // 对于玩家、传送带等普通来源，只有当本建筑有主动连接时才接受
+    return !links.isEmpty();
 }
 
         protected boolean checkAccept(Building source, Tile link){
