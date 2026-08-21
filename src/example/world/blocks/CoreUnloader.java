@@ -88,12 +88,9 @@ public class CoreUnloader extends Block {
                 while (transportCounter >= transportTime) {
                     Item item = null;
                     for (Item i : content.items()) {
-                        if (core.items.has(i)) {
-                            // 使用 remove 方法移除一个物品
-                            if (core.items.remove(i, 1) > 0) {
-                                item = i;
-                                break;
-                            }
+                        if (core.items.take(i) > 0) {
+                            item = i;
+                            break;
                         }
                     }
                     if (item != null) {
