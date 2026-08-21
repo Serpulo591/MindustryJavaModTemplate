@@ -331,59 +331,32 @@ public void updateTile(){
 
     transportCounter += edelta();
 
-    while(transportCounter >= transportTime){
+while(transportCounter >= transportTime){
+    if(items.total() >= itemCapacity){
+        transportCounter = 0f;
+        break;
+    }
 
-        if(links.isEmpty()){
-            transportIndex = 0;
-            break;
-        }
+    Item item = null;
 
-        Item item = items.take();
-
-        if(item == null){
-            break;
-        }
-
-        boolean sent = false;
-
-        for(int offset = 0; offset < links.size; offset++){
-
-            int index = (transportIndex + offset) % links.size;
-
-            Tile targetTile = world.tile(links.get(index));
-
-            if(targetTile == null || !linkValid(tile, targetTile)){
-                continue;
-            }
-
-            Building target = targetTile.build;
-
-            if(target.acceptItem(this, item)){
-
-                target.handleItem(this, item);
-
-                moved = true;
-                sent = true;
-
-                transportIndex = index + 1;
-
-                if(transportIndex >= links.size){
-                    transportIndex = 0;
-                }
-
-                break;
-            }
-        }
-
-        if(sent){
-            transportCounter -= transportTime;
-        }else{
-            items.add(item, 1);
-            items.undoFlow(item);
-
+    for(Item i : content.items()){
+        if(core.items.has(i)){
+            item = i;
             break;
         }
     }
+
+    if(item == null){
+        transportCounter = 0f;
+        break;
+    }
+
+    core.items.remove(item, 1);
+    items.add(item, 1);
+    dumpAccumulate();
+
+    transportCounter -= transportTime;
+}
 }
 
         @Override
@@ -474,11 +447,12 @@ public void updateTile(){
 
 @Override
 public boolean acceptItem(Building source, Item item){
-    if(source == this ||
-       !hasItems ||
-       team != source.team ||
-       items.total() >= itemCapacity){
+    if(!hasItems || items.total() >= itemCapacity){
         return false;
+    }
+
+    if(source == this){
+        return !links.isEmpty();
     }
 
     if(source instanceof BridgeRouterBuild bridge){
