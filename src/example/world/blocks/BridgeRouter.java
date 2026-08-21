@@ -318,6 +318,11 @@ public void updateTile(){
         powerStatus,
         1f / 30f
     );
+    
+    if(hasPower && power.status <= 0f){
+        transportCounter = 0f;
+        return;
+    }
 
     if(transportIndex >= links.size){
         transportIndex = 0;
