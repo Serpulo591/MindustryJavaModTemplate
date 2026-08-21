@@ -27,6 +27,7 @@ import static mindustry.Vars.*;
 public class BridgeRouter extends Block {
     public final int timerCheckMoved = timers ++;
     public int range = 5;
+    public int maxLinks = 3;
     public float transportTime = 1f;
     public float arrowSpacing = 4f, arrowPeriod = 0.4f;
     public float arrowTimeScl = 6.2f;
@@ -214,6 +215,7 @@ public class BridgeRouter extends Block {
 public boolean onConfigureBuildTapped(Building other) {
     if(other == this){
         links.clear();
+        transportIndex = 0;
         return false;
     }
 
@@ -222,19 +224,33 @@ public boolean onConfigureBuildTapped(Building other) {
         int myPos = tile.pos();
         int otherPos = other.tile.pos();
 
-        // 如果对方已经连接到我，
-        // 先清除对方 → 我的连接
-        if(b.links.contains(myPos)){
-            b.links.removeValue(myPos);
-        }
-
-        // 我已经连接到对方 → 取消连接
+        // 已经连接 → 取消连接
         if(links.contains(otherPos)){
             links.removeValue(otherPos);
-        }else{
-            // 建立我 → 对方
-            links.add(otherPos);
+
+            if(transportIndex >= links.size){
+                transportIndex = 0;
+            }
+
+            return false;
         }
+
+        // 新增连接前检查数量上限
+        if(links.size >= maxLinks){
+            return false;
+        }
+
+        // 对方已经连接到我 → 清除对方的反向连接
+        if(b.links.contains(myPos)){
+            b.links.removeValue(myPos);
+
+            if(b.transportIndex >= b.links.size){
+                b.transportIndex = 0;
+            }
+        }
+
+        // 建立我 → 对方
+        links.add(otherPos);
 
         return false;
     }
