@@ -328,35 +328,6 @@ public void updateTile(){
     if(transportIndex >= links.size){
         transportIndex = 0;
     }
-
-    transportCounter += edelta();
-
-while(transportCounter >= transportTime){
-    if(items.total() >= itemCapacity){
-        transportCounter = 0f;
-        break;
-    }
-
-    Item item = null;
-
-    for(Item i : content.items()){
-        if(core.items.has(i)){
-            item = i;
-            break;
-        }
-    }
-
-    if(item == null){
-        transportCounter = 0f;
-        break;
-    }
-
-    core.items.remove(item, 1);
-    items.add(item, 1);
-    dumpAccumulate();
-
-    transportCounter -= transportTime;
-}
 }
 
         @Override
