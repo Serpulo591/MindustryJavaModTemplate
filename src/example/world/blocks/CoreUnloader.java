@@ -68,14 +68,33 @@ public class CoreUnloader extends Block {
         public float transportCounter = 0f;
         public boolean hadValidLink;
 
-        public boolean linkValid(Tile other) {
-            if (other == null || other.build == null) return false;
-            Building b = other.build;
-            if (!(b instanceof CoreBlock.CoreBuild)) return false;
-            if (b.team != team) return false;
-            float dx = other.x - tile.x, dy = other.y - tile.y;
-            return dx * dx + dy * dy <= range * range;
-        }
+public boolean linkValid(Tile other){
+    if(other == null || other.build == null) return false;
+
+    Building b = other.build;
+
+    if(!(b instanceof CoreBlock.CoreBuild)) return false;
+    if(b.team != team) return false;
+
+    float dx = other.x - tile.x;
+    float dy = other.y - tile.y;
+
+    return dx * dx + dy * dy <= range * range;
+}
+
+private CoreBlock.CoreBuild linkedCore(){
+    if(link < 0) return null;
+
+    Tile other = world.tile(link);
+
+    if(!linkValid(other)){
+        link = -1;
+        transportCounter = 0f;
+        return null;
+    }
+
+    return (CoreBlock.CoreBuild)other.build;
+}
 
 @Override
 public void updateTile(){
