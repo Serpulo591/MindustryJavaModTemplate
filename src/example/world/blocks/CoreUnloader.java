@@ -77,37 +77,46 @@ public class CoreUnloader extends Block {
             return dx * dx + dy * dy <= range * range;
         }
 
-        @Override
-        public void updateTile() {
-            Tile other = world.tile(link);
-            hadValidLink = linkValid(other);
+@Override
+public void updateTile(){
+    if(link == -1){
+        transportCounter = 0f;
+        return;
+    }
 
-            if (hadValidLink) {
-                CoreBlock.CoreBuild core = (CoreBlock.CoreBuild) other.build;
-                transportCounter += delta();
+    Tile other = world.tile(link);
 
-                while (transportCounter >= transportTime) {
-                    Item item = null;
-                    for (Item i : content.items()) {
-                        if (core.items.has(i)) {
-                            core.items.remove(i, 1);
-                            item = i;
-                            break;
-                        }
-                    }
-                    if (item != null) {
-                        items.add(item, 1);
-                        dumpAccumulate();
-                    } else {
-                        transportCounter = 0f;
-                        break;
-                    }
-                    transportCounter -= transportTime;
-                }
-            } else {
-                transportCounter = 0f;
+    if(!linkValid(other)){
+        transportCounter = 0f;
+        return;
+    }
+
+    CoreBlock.CoreBuild core = (CoreBlock.CoreBuild)other.build;
+
+    transportCounter += delta();
+
+    while(transportCounter >= transportTime){
+        Item item = null;
+
+        for(Item i : content.items()){
+            if(core.items.has(i)){
+                core.items.remove(i, 1);
+                item = i;
+                break;
             }
         }
+
+        if(item != null){
+            items.add(item, 1);
+            dumpAccumulate();
+        }else{
+            transportCounter = 0f;
+            break;
+        }
+
+        transportCounter -= transportTime;
+    }
+}
 
         @Override
         public boolean acceptItem(Building source, Item item) {
@@ -119,14 +128,16 @@ public class CoreUnloader extends Block {
             return true;
         }
 
-        @Override
-        public void configure(Object value) {
-            if (value instanceof Integer) {
-                link = (Integer) value;
-            } else {
-                link = -1;
-            }
-        }
+@Override
+public void configure(Object value){
+    if(value instanceof Integer i){
+        link = i;
+    }else{
+        link = -1;
+    }
+
+    transportCounter = 0f;
+}
 
         @Override
         public Object config() {
@@ -162,7 +173,7 @@ private void drawInput(Tile other){
 
     Drawf.dashLine(Pal.accent, tx, ty, ox, oy);
 
-    Drawf.square(ox, oy, other.block().size * tilesize / 2f + 2f, Pal.accent);
+    Drawf.square(ox, oy, 2f, Pal.accent);
 }
 
 @Override
@@ -188,12 +199,7 @@ public void drawConfigure(){
         // 当前连接的 Core 不画候选框
         if(b.pos() == link) return;
 
-        Drawf.select(
-            b.x,
-            b.y,
-            b.block.size * tilesize / 2f + 2f,
-            Pal.breakInvalid
-        );
+        Drawf.select(b.x, b.y, b.block.size * tilesize / 2f + 2f, Pal.breakInvalid);
     });
 
     Draw.reset();
