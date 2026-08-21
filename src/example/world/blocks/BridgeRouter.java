@@ -78,10 +78,6 @@ public class BridgeRouter extends Block {
             }
         });
     }
-    
-    public void doDump(){
-        dumpAccumulate();
-    }
 
     @Override
     public void setStats() {
@@ -207,6 +203,10 @@ public class BridgeRouter extends Block {
             });
 
             Draw.reset();
+        }
+        
+        public void doDump(){
+            dumpAccumulate();
         }
 
         // ---------- 配置点击交互 ----------
