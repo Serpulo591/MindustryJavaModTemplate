@@ -104,11 +104,7 @@ public void updateTile(){
     }
 
     CoreBlock.CoreBuild core = (CoreBlock.CoreBuild)other.build;
-    while(returnUnselected(core)){}
-
-    if(items.total() >= itemCapacity){
-        transportCounter = 0f;
-        return;
+    while(returnUnselected(core)){
     }
 
     if(selectedItems.isEmpty()){
@@ -118,20 +114,22 @@ public void updateTile(){
 
     transportCounter += delta();
     while(transportCounter >= transportTime){
-        if(items.total() >= itemCapacity){
-            transportCounter = 0f;
-            break;
-        }
         Item item = null;
         int size = selectedItems.size;
         for(int offset = 0; offset < size; offset++){
             int index = (nextItemIndex + offset) % size;
             Item candidate = selectedItems.get(index);
-            if(core.items.has(candidate)){
-                item = candidate;
-                nextItemIndex = (index + 1) % size;
-                break;
+            if(items.get(candidate) >= itemCapacity){
+                continue;
             }
+
+            if(!core.items.has(candidate)){
+                continue;
+            }
+
+            item = candidate;
+            nextItemIndex = (index + 1) % size;
+            break;
         }
 
         if(item == null){
