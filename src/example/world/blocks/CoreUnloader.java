@@ -181,14 +181,12 @@ public boolean onConfigureBuildTapped(Building other){
 
 private void drawInput(Tile other){
     if(!linkValid(other)) return;
-
     float tx = tile.drawx();
     float ty = tile.drawy();
     float ox = other.drawx();
     float oy = other.drawy();
-
     Drawf.dashLine(Pal.accent, tx, ty, ox, oy);
-    Drawf.select(b.x, b.y, b.block.size * tilesize / 2f + 2f, Pal.place);
+    Drawf.select(ox, oy, other.block().size * tilesize / 2f + 2f, Pal.place);
     Drawf.square(ox, oy, 2f, Pal.accent);
 }
 
@@ -210,12 +208,7 @@ public void drawConfigure(){
         if(b.team != team) return;
         if(!within(b, range)) return;
         if(b.pos() == link) return;
-        Drawf.select(
-            b.x,
-            b.y,
-            b.block.size * tilesize / 2f + 2f,
-            Pal.breakInvalid
-        );
+        Drawf.select( b.x, b.y, b.block.size * tilesize / 2f + 2f, Pal.breakInvalid);
     });
     Draw.reset();
 }
