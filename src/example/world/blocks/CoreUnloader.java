@@ -103,7 +103,6 @@ public void updateTile(){
     CoreBlock.CoreBuild core = (CoreBlock.CoreBuild)other.build;
 
     // ===== 1. 提取阶段：从核心拉取物品 =====
-    // 把不选中的物品送回核心
     while(returnUnselected(core)){}
 
     if(selectedItems.isEmpty()){
@@ -123,11 +122,16 @@ public void updateTile(){
         transportCounter -= transportTime;
     }
 
-    // ===== 2. 输出阶段：向周围输出 =====
-    if(items.total() > 0){
-        for(Item item : content.items()){
+    // ===== 2. 输出阶段：按 selectedItems 顺序轮询输出 =====
+    if(items.total() > 0 && !selectedItems.isEmpty()){
+        int size = selectedItems.size;
+        for(int i = 0; i < size; i++){
+            int idx = (outputIndex + i) % size;
+            Item item = selectedItems.get(idx);
             if(items.get(item) > 0){
                 outputToAdjacent(item);
+                outputIndex = (idx + 1) % size;
+                break;
             }
         }
     }
