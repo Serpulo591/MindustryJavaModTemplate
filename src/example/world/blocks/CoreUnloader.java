@@ -194,28 +194,29 @@ private void drawInput(Tile other){
 
 @Override
 public void drawConfigure(){
-    float sin = Mathf.absin(Time.time, 4, 1);
-    Lines.stroke(1);
-    Drawf.circles(x, y, 9 + sin, Pal.accent);
-    Drawf.dashCircle(x, y, range, Pal.accent);
+    float sin = Mathf.absin(Time.time, 4f, 1f);
+    Lines.stroke(1f);
+    Drawf.circles(x, y, 9f + sin, Pal.accent);
+    Drawf.dashCircle(x, y, range * tilesize, Pal.accent);
 
     if(link != -1){
         Tile other = world.tile(link);
-
         if(other != null && linkValid(other)){
             drawInput(other);
         }
     }
-
     Groups.build.each(b -> {
         if(!(b instanceof CoreBlock.CoreBuild)) return;
         if(b.team != team) return;
         if(!within(b, range)) return;
         if(b.pos() == link) return;
-
-        Drawf.select(b.x, b.y, b.block.size * tilesize / 2f + 2f, Pal.breakInvalid);
+        Drawf.select(
+            b.x,
+            b.y,
+            b.block.size * tilesize / 2f + 2f,
+            Pal.breakInvalid
+        );
     });
-
     Draw.reset();
 }
 
