@@ -1,5 +1,9 @@
 package example.world.blocks;
 
+import arc.scene.ui.ImageButton;
+import arc.scene.ui.ScrollPane;
+import arc.scene.layout.Table;
+import arc.scene.style.TextureRegionDrawable;
 import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.math.Mathf;
@@ -67,7 +71,7 @@ public class CoreUnloader extends Block {
         public int link = -1;
         public float transportCounter = 0f;
         public boolean hadValidLink;
-
+        public Seq<Item> selectedItems = new Seq<>();
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
             Building b = other.build;
@@ -114,7 +118,7 @@ public void updateTile(){
 
         Item item = null;
 
-        for(Item i : content.items()){
+        for(Item i : selectedItems){
             if(core.items.has(i)){
                 item = i;
                 break;
@@ -162,8 +166,78 @@ public void configure(Object value){
         }
 
 @Override
+public void buildConfiguration(Table table){
+    table.clear();
+    table.top();
+    Table cont = new Table();
+    cont.top();
+    cont.defaults().size(40);
+    int column = 0;
+    for(Item item : content.items()){
+        if(!item.unlockedNow()) continue;
+        if(!item.isOnPlanet(Vars.state.getPlanet())) continue;
+        if(item.isHidden()) continue;
+        ImageButton button = cont.button(
+            Tex.whiteui,
+            Styles.clearNoneTogglei,
+            Mathf.clamp(item.selectionSize, 0, 40),
+            () -> {}
+        ).tooltip(item.localizedName).get();
+        button.getStyle().imageUp =
+            new TextureRegionDrawable(item.uiIcon);
+        button.changed(() -> {
+            if(button.isChecked()){
+                if(!selectedItems.contains(item)){
+                    selectedItems.add(item);
+                }
+            }else{
+                selectedItems.remove(item);
+            }
+        });
+        button.update(() -> {
+            button.setChecked(selectedItems.contains(item));
+        });
+        column++;
+        if(column >= 4){
+            cont.row();
+            column = 0;
+        }
+    }
+    Table main = new Table();
+    main.background(Styles.black6);
+    ScrollPane pane = new ScrollPane(cont, Styles.smallPane);
+    pane.setScrollingDisabled(true, false);
+    pane.setOverscroll(false, false);
+    main.add(pane)
+        .maxHeight(40 * 5)
+        .growX();
+    table.add(main).growX();
+}
+
+@Override
 public boolean onConfigureBuildTapped(Building other){
+
+    if(other == this){
+
+        if(selectedItems.size == 0){
+
+            for(Item item : content.items()){
+                if(!item.unlockedNow()) continue;
+                if(item.isHidden()) continue;
+
+                selectedItems.add(item);
+            }
+
+        }else{
+
+            selectedItems.clear();
+        }
+
+        return false;
+    }
+
     if(other instanceof CoreBlock.CoreBuild && other.team == team){
+
         if(dst(other) <= range){
 
             if(link == other.pos()){
@@ -213,16 +287,28 @@ public void drawConfigure(){
     Draw.reset();
 }
 
-        @Override
-        public void write(Writes write) {
-            super.write(write);
-            write.i(link);
-        }
+@Override
+public void write(Writes write){
+    super.write(write);
+    write.i(link);
+    write.s(selectedItems.size);
+    for(Item item : selectedItems){
+        write.i(item.id);
+    }
+}
 
-        @Override
-        public void read(Reads read, byte revision) {
-            super.read(read, revision);
-            link = read.i();
+@Override
+public void read(Reads read, byte revision){
+    super.read(read, revision);
+    link = read.i();
+    selectedItems.clear();
+    int size = read.s();
+    for(int i = 0; i < size; i++){
+        Item item = content.item(read.i());
+        if(item != null){
+            selectedItems.add(item);
         }
+    }
+}
     }
 }
