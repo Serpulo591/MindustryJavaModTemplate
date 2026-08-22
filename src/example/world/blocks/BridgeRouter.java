@@ -552,14 +552,17 @@ protected boolean checkAccept(Building source){
             return hadValidLink && enabled;
         }
 
-        @Override
-        public Point2 config(){
-            if(links.size > 0){
-                int pos = links.get(0);
-                return Point2.unpack(pos).sub(tile.x, tile.y);
-            }
-            return new Point2(0, 0);
-        }
+@Override
+public IntSeq config(){
+    IntSeq seq = new IntSeq();
+    for(int i = 0; i < links.size; i++){
+        int pos = links.get(i);
+        seq.add(Point2.x(pos) - tile.x);
+        seq.add(Point2.y(pos) - tile.y);
+    }
+
+    return seq;
+}
 
         @Override
         public byte version(){
