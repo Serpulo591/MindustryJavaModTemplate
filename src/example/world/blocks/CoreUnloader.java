@@ -142,11 +142,10 @@ if(items.total() > 0 && !selectedItems.isEmpty()){
                 continue;
             }
 
-            if(outputToAdjacent(item)){
-                outputIndex = (idx + 1) % size;
-                output = true;
-                break;
-            }
+            outputToAdjacent(item)
+            outputIndex = (idx + 1) % size;
+            output = true;
+            break;
         }
 
         // 一个都输出不了，结束本 tick
