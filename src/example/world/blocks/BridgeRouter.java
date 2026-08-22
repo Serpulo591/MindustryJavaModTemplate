@@ -553,15 +553,32 @@ protected boolean checkAccept(Building source){
         }
 
 @Override
-public IntSeq config(){
-    IntSeq seq = new IntSeq();
-    for(int i = 0; i < links.size; i++){
-        int pos = links.get(i);
-        seq.add(Point2.x(pos) - tile.x);
-        seq.add(Point2.y(pos) - tile.y);
+public void configure(Object value){
+    if(value instanceof Point2 point){
+        link = Point2.pack(
+            tile.x + point.x,
+            tile.y + point.y
+        );
+    }else if(value instanceof Integer i){
+        // 保留你原来的手动连接兼容
+        link = i;
+    }else{
+        link = -1;
     }
 
-    return seq;
+    transportCounter = 0f;
+}
+
+@Override
+public Object config(){
+    if(link == -1){
+        return new Point2(0, 0);
+    }
+
+    return new Point2(
+        Point2.x(link) - tile.x,
+        Point2.y(link) - tile.y
+    );
 }
 
         @Override
