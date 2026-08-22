@@ -24,7 +24,7 @@ import static mindustry.Vars.*;
 
 public class CoreUnloader extends Block {
     public int range = 250;
-    public float transportTime = 1f;
+    public float transportTime = 0.1f;
 
     public CoreUnloader(String name) {
         super(name);
@@ -79,8 +79,6 @@ public class CoreUnloader extends Block {
         public int pullIndex = 0;
         public int nextItemIndex = 0;
         public int outputIndex = 0;
-        public int pullAmount = 10;
-        public int outputAmount = 10;
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
             Building b = other.build;
@@ -111,50 +109,25 @@ public void updateTile(){
     }
 
     transportCounter += delta();
-    int pulled = 0;
-    while(
-        transportCounter >= transportTime &&
-        pulled < pullAmount &&
-        items.total() < itemCapacity
-    ){
+    while(transportCounter >= transportTime){
         Item item = getNextItemFromCore(core);
         if(item == null){
             transportCounter = 0f;
             break;
         }
-
         core.items.remove(item, 1);
         items.add(item, 1);
         transportCounter -= transportTime;
-        pulled++;
     }
 
     if(items.total() > 0 && !selectedItems.isEmpty()){
         int size = selectedItems.size;
-        for(int n = 0; n < outputAmount; n++){
-            if(items.total() <= 0){
-                break;
-            }
-
-            boolean found = false;
-            for(int i = 0; i < size; i++){
-                int idx = (outputIndex + i) % size;
-                Item item = selectedItems.get(idx);
-                if(items.get(item) <= 0){
-                    continue;
-                }
-
-                int before = items.get(item);
+        for(int i = 0; i < size; i++){
+            int idx = (outputIndex + i) % size;
+            Item item = selectedItems.get(idx);
+            if(items.get(item) > 0){
                 outputToAdjacent(item);
-                int after = items.get(item);
-                if(after < before){
-                    outputIndex = (idx + 1) % size;
-                    found = true;
-                    break;
-                }
-            }
-
-            if(!found){
+                outputIndex = (idx + 1) % size;
                 break;
             }
         }
@@ -208,6 +181,7 @@ private Item getNextItemFromCore(CoreBlock.CoreBuild core){
             return item;
         }
     }
+
     pullIndex = 0;
     return null;
 }
