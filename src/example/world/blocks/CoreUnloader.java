@@ -62,7 +62,7 @@ public class CoreUnloader extends Block {
         if (transportTime != 0f) {
             stats.add(Stat.itemsMoved, 60f / transportTime, StatUnit.itemsSecond);
         }
-        stats.add(Stat.linkRange, range, StatUnit.blocks);
+        stats.add(Stat.range, range, StatUnit.blocks);
     }
 
     @Override

@@ -50,7 +50,7 @@ public class BridgeRouter extends Block {
         group = BlockGroup.transportation;
         noUpdateDisabled = true;
         allowDiagonal = true;
-        copyConfig = false;
+        copyConfig = true;
         allowConfigInventory = false;
         priority = TargetPriority.transport;
         delayLandingConfig = true;
