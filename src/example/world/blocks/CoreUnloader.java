@@ -114,10 +114,6 @@ if(transportCounter >= transportTime){
     int amount = 0;
 
     while(amount < 10){
-        if(items.total() >= itemCapacity){
-            break;
-        }
-
         Item item = getNextItemFromCore(core);
         if(item == null){
             break;
