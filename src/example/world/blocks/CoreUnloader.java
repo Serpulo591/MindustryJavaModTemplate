@@ -114,6 +114,10 @@ if(transportCounter >= transportTime){
     int amount = 0;
 
     while(amount < 10){
+        if(items.total() >= itemCapacity){
+            break;
+        }
+
         Item item = getNextItemFromCore(core);
         if(item == null){
             break;
@@ -133,25 +137,31 @@ if(items.total() > 0 && !selectedItems.isEmpty()){
     for(int n = 0; n < 10; n++){
         if(items.total() <= 0) break;
 
-        Item item = selectedItems.get(outputIndex);
+        boolean output = false;
 
-        // 当前轮询物品没有库存
-        if(items.get(item) <= 0){
-            outputIndex = (outputIndex + 1) % size;
-            continue;
+        for(int i = 0; i < size; i++){
+            int idx = (outputIndex + i) % size;
+            Item item = selectedItems.get(idx);
+
+            if(items.get(item) <= 0) continue;
+
+            int before = items.get(item);
+
+            outputToAdjacent(item);
+
+            int after = items.get(item);
+
+            // 成功输出
+            if(after < before){
+                outputIndex = (idx + 1) % size;
+                output = true;
+                break;
+            }
+
+            // 输出失败：继续尝试下一个物品/出口
         }
 
-        int before = items.get(item);
-
-        outputToAdjacent(item);
-
-        // 成功输出
-        if(items.get(item) < before){
-            outputIndex = (outputIndex + 1) % size;
-        }else{
-            // 当前物品输出失败，停止本 tick
-            break;
-        }
+        if(!output) break;
     }
 }
 }
