@@ -79,7 +79,7 @@ public class CoreUnloader extends Block {
         public int pullIndex = 0;
         public int nextItemIndex = 0;
         public int outputIndex = 0;
-        public int outputPortIndex = 0;
+        public int directionIndex = 0;
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
             Building b = other.build;
@@ -148,11 +148,14 @@ if(items.total() > 0 && !selectedItems.isEmpty()){
 
             int after = items.get(item);
 
+            // 成功输出
             if(after < before){
                 outputIndex = (idx + 1) % size;
                 output = true;
                 break;
             }
+
+            // 输出失败：继续尝试下一个物品/出口
         }
 
         if(!output) break;
@@ -167,16 +170,18 @@ private void outputToAdjacent(Item item){
     int size = block.size;
     IntSeq positions = new IntSeq();
     for(int x = tx; x < tx + size; x++){
-        positions.add(Point2.pack(x, ty + size));
-        positions.add(Point2.pack(x, ty - 1));
+        positions.add(Point2.pack(x, ty + size)); // 下
+        positions.add(Point2.pack(x, ty - 1));    // 上
     }
     for(int y = ty; y < ty + size; y++){
-        positions.add(Point2.pack(tx - 1, y));
-        positions.add(Point2.pack(tx + size, y));
+        positions.add(Point2.pack(tx - 1, y));    // 左
+        positions.add(Point2.pack(tx + size, y)); // 右
     }
 
-    for(int i = 0; i < positions.size; i++){
-        int pos = positions.get(i);
+    int total = positions.size;
+    for(int i = 0; i < total; i++){
+        int idx = (directionIndex + i) % total; // ★ 从上次方向开始轮询
+        int pos = positions.get(idx);
         Tile targetTile = world.tile(Point2.x(pos), Point2.y(pos));
         if(targetTile == null || targetTile.build == null) continue;
 
@@ -184,17 +189,19 @@ private void outputToAdjacent(Item item){
         if(target.team != team) continue;
 
         Object cfg = target.config();
-        if(cfg instanceof Item targetItem){
-            if(targetItem != item) continue;
-        }
+        if(cfg instanceof Item targetItem && targetItem != item) continue;
 
         if(target.acceptItem(this, item)){
             int amount = Math.min(items.get(item), 1);
             target.handleItem(this, item);
             items.remove(item, amount);
+            // ★ 更新方向索引，下次从下一个口开始
+            directionIndex = (idx + 1) % total;
             return;
         }
     }
+    // 所有口都不可用，重置
+    directionIndex = 0;
 }
 
 private Item getNextItemFromCore(CoreBlock.CoreBuild core){
