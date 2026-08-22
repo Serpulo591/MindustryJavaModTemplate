@@ -34,6 +34,7 @@ public class CoreUnloader extends Block {
         configurable = true;
         hasItems = true;
         unloadable = true;
+        separateItemCapacity = true;
         group = BlockGroup.transportation;
         noUpdateDisabled = true;
         allowDiagonal = true;
@@ -95,11 +96,6 @@ public void updateTile(){
         return;
     }
 
-    if(items.total() >= itemCapacity){
-        transportCounter = 0f;
-        return;
-    }
-
     Tile other = world.tile(link);
 
     if(!linkValid(other)){
@@ -108,6 +104,13 @@ public void updateTile(){
     }
 
     CoreBlock.CoreBuild core = (CoreBlock.CoreBuild)other.build;
+
+    returnUnselectedItems(core);
+
+    if(items.total() >= itemCapacity){
+        transportCounter = 0f;
+        return;
+    }
 
     transportCounter += delta();
 
@@ -214,6 +217,22 @@ public void buildConfiguration(Table table){
         .maxHeight(40 * 5)
         .growX();
     table.add(main).growX();
+}
+
+private boolean returnUnselectedItems(CoreBlock.CoreBuild core){
+    boolean moved = false;
+    for(Item item : content.items()){
+        if(selectedItems.contains(item)) continue;
+        int amount = items.get(item);
+        if(amount <= 0) continue;
+        if(core.acceptItem(this, item)){
+            items.remove(item, 1);
+            core.handleItem(this, item);
+            moved = true;
+        }
+    }
+
+    return moved;
 }
 
 @Override
