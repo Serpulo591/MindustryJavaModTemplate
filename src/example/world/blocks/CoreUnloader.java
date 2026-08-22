@@ -79,7 +79,6 @@ public class CoreUnloader extends Block {
         public int pullIndex = 0;
         public int nextItemIndex = 0;
         public int outputIndex = 0;
-        public int directionIndex = 0;
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
             Building b = other.build;
@@ -91,7 +90,6 @@ public class CoreUnloader extends Block {
 
 @Override
 public void updateTile(){
-    // 效率或连接无效 → 停止
     if(efficiency <= 0f || link == -1){
         transportCounter = 0f;
         return;
@@ -104,21 +102,12 @@ public void updateTile(){
     }
 
     CoreBlock.CoreBuild core = (CoreBlock.CoreBuild)other.build;
-
-    // ============================================================
-    // 1. 把不选中的物品送回核心
-    // ============================================================
     while(returnUnselected(core)){}
-
-    // 没有选中任何物品 → 停止
     if(selectedItems.isEmpty()){
         transportCounter = 0f;
         return;
     }
 
-    // ============================================================
-    // 2. 提取阶段：按 selectedItems 顺序从核心拉取物品
-    // ============================================================
     transportCounter += delta();
     while(transportCounter >= transportTime){
         Item item = getNextItemFromCore(core);
@@ -131,62 +120,74 @@ public void updateTile(){
         transportCounter -= transportTime;
     }
 
-    // ============================================================
-    // 3. 输出阶段：按 selectedItems 顺序轮询输出到周围
-    // ============================================================
-    if(items.total() > 0 && !selectedItems.isEmpty()){
-        int size = selectedItems.size;
-        for(int i = 0; i < size; i++){
-            int idx = (outputIndex + i) % size;
-            Item item = selectedItems.get(idx);
-            if(items.get(item) > 0){
-                outputToAdjacent(item);
-                outputIndex = (idx + 1) % size;
-                break; // 每帧只输出一种物品，下一帧继续轮询
-            }
+if(items.total() > 0 && !selectedItems.isEmpty()){
+    int size = selectedItems.size;
+    for(int i = 0; i < size; i++){
+        int idx = (outputIndex + i) % size;
+        Item item = selectedItems.get(idx);
+        if(items.get(item) <= 0) continue;
+        if(outputToAdjacent(item)){
+            outputIndex = (idx + 1) % size;
         }
+
+        if(items.total() <= 0) break;
     }
 }
+}
 
-private void outputToAdjacent(Item item){
-    if(item == null || items.get(item) <= 0) return;
-
-    int tx = tile.x, ty = tile.y;
+private boolean outputToAdjacent(Item item){
+    if(item == null || items.get(item) <= 0) return false;
+    int tx = tile.x;
+    int ty = tile.y;
     int size = block.size;
-    IntSeq positions = new IntSeq();
+    boolean output = false;
     for(int x = tx; x < tx + size; x++){
-        positions.add(Point2.pack(x, ty + size));
-        positions.add(Point2.pack(x, ty - 1));
-    }
-    for(int y = ty; y < ty + size; y++){
-        positions.add(Point2.pack(tx - 1, y));
-        positions.add(Point2.pack(tx + size, y));
-    }
 
-    int total = positions.size;
-    for(int i = 0; i < total; i++){
-        int idx = (directionIndex + i) % total;
-        int pos = positions.get(idx);
-        Tile targetTile = world.tile(Point2.x(pos), Point2.y(pos));
-        if(targetTile == null || targetTile.build == null) continue;
-
-        Building target = targetTile.build;
-        if(target.team != team) continue;
-
-        Object cfg = target.config();
-        if(cfg instanceof Item targetItem && targetItem != item) continue;
-
-        if(target.acceptItem(this, item)){
-            int amount = Math.min(items.get(item), 1);
-            target.handleItem(this, item);
-            items.remove(item, amount);
-            // ★ 记录下次从下一个位置开始 ★
-            directionIndex = (idx + 1) % total;
-            return;
+        if(tryOutput(x, ty + size, item)){
+            output = true;
         }
+
+        if(items.get(item) <= 0) return output;
+
+        if(tryOutput(x, ty - 1, item)){
+            output = true;
+        }
+
+        if(items.get(item) <= 0) return output;
     }
-    // 所有位置都不可用，重置
-    directionIndex = 0;
+
+    for(int y = ty; y < ty + size; y++){
+
+        if(tryOutput(tx - 1, y, item)){
+            output = true;
+        }
+
+        if(items.get(item) <= 0) return output;
+
+        if(tryOutput(tx + size, y, item)){
+            output = true;
+        }
+
+        if(items.get(item) <= 0) return output;
+    }
+
+    return output;
+}
+
+private boolean tryOutput(int x, int y, Item item){
+    Tile targetTile = world.tile(x, y);
+    if(targetTile == null || targetTile.build == null) return false;
+    Building target = targetTile.build;
+    if(target.team != team) return false;
+    Object cfg = target.config();
+    if(cfg instanceof Item targetItem){
+        if(targetItem != item) return false;
+    }
+
+    if(!target.acceptItem(this, item)) return false;
+    target.handleItem(this, item);
+    items.remove(item, 1);
+    return true;
 }
 
 private Item getNextItemFromCore(CoreBlock.CoreBuild core){
