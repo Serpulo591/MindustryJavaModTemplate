@@ -86,8 +86,7 @@ public void setBars() {
         return new Bar(
             () -> Core.bundle.format("bar.powerlines", build.links.size, maxLinks),
             () -> Pal.items,
-            () -> (float)build.links.size / (float)maxLinks
-        );
+            () -> (float)build.links.size / (float)maxLinks);
     });
 }
 
@@ -98,7 +97,7 @@ public void setBars() {
             stats.add(Stat.itemsMoved, 30f / transportTime, StatUnit.itemsSecond);
         }
         stats.add(GlowStat.bridgeConnections, maxLinks, StatUnit.none);
-        stats.add(Stat.linkRange, range, StatUnit.blocks);
+        stats.add(Stat.range, range, StatUnit.blocks);
     }
 
     @Override
