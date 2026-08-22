@@ -79,6 +79,7 @@ public class CoreUnloader extends Block {
         public int pullIndex = 0;
         public int nextItemIndex = 0;
         public int outputIndex = 0;
+        public int directionIndex = 0;
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
             Building b = other.build;
@@ -177,8 +178,13 @@ private void outputToAdjacent(Item item){
         positions.add(Point2.pack(tx + size, y));
     }
 
-    for(int i = 0; i < positions.size; i++){
-        int pos = positions.get(i);
+    int total = positions.size;
+    if(total == 0) return;
+
+    // ★ 从 directionIndex 开始轮询 ★
+    for(int i = 0; i < total; i++){
+        int idx = (directionIndex + i) % total;
+        int pos = positions.get(idx);
         Tile targetTile = world.tile(Point2.x(pos), Point2.y(pos));
         if(targetTile == null || targetTile.build == null) continue;
 
@@ -186,17 +192,20 @@ private void outputToAdjacent(Item item){
         if(target.team != team) continue;
 
         Object cfg = target.config();
-        if(cfg instanceof Item targetItem){
-            if(targetItem != item) continue;
-        }
+        if(cfg instanceof Item targetItem && targetItem != item) continue;
 
         if(target.acceptItem(this, item)){
             int amount = Math.min(items.get(item), 1);
             target.handleItem(this, item);
             items.remove(item, amount);
+            // 成功输出：更新方向索引到下一个
+            directionIndex = (idx + 1) % total;
             return;
         }
     }
+
+    // 没有任何目标能接收 → 重置方向索引（可选）
+    directionIndex = 0;
 }
 
 private Item getNextItemFromCore(CoreBlock.CoreBuild core){
