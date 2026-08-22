@@ -134,10 +134,20 @@ if(items.total() > 0 && !selectedItems.isEmpty()){
 
             if(items.get(item) <= 0) continue;
 
+            int before = items.get(item);
+
             outputToAdjacent(item);
-            outputIndex = (idx + 1) % size;
-            output = true;
-            break;
+
+            int after = items.get(item);
+
+            // 成功输出
+            if(after < before){
+                outputIndex = (idx + 1) % size;
+                output = true;
+                break;
+            }
+
+            // 输出失败：继续尝试下一个物品/出口
         }
 
         if(!output) break;
