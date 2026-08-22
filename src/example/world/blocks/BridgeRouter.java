@@ -69,7 +69,7 @@ config(IntSeq.class, (BridgeRouterBuild build, IntSeq seq) -> {
 
         Tile target = world.tile(Point2.x(pos), Point2.y(pos));
 
-        if(target != null && build.linkValid(build.tile, target, false)){
+        if(target != null && linkValid(build.tile, target, false)){
             build.links.add(pos);
         }
     }
