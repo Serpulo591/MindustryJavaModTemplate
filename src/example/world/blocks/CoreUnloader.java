@@ -89,7 +89,6 @@ public void updateTile(){
         return;
     }
 
-    // 自己已经满了，停止从 Core 提取
     if(items.total() >= itemCapacity){
         transportCounter = 0f;
         return;
@@ -108,7 +107,6 @@ public void updateTile(){
 
     while(transportCounter >= transportTime){
 
-        // 每次提取前再次检查容量
         if(items.total() >= itemCapacity){
             transportCounter = 0f;
             break;
@@ -128,7 +126,6 @@ public void updateTile(){
             break;
         }
 
-        // 先从 Core 移除，再加入本建筑
         core.items.remove(item, 1);
         items.add(item, 1);
 
@@ -169,7 +166,6 @@ public boolean onConfigureBuildTapped(Building other){
     if(other instanceof CoreBlock.CoreBuild && other.team == team){
         if(dst(other) <= range){
 
-            // 再次点击当前连接的 Core -> 取消连接
             if(link == other.pos()){
                 configure(-1);
             }else{
@@ -192,16 +188,17 @@ private void drawInput(Tile other){
     float oy = other.drawy();
 
     Drawf.dashLine(Pal.accent, tx, ty, ox, oy);
-
+    Drawf.select(b.x, b.y, b.block.size * tilesize / 2f + 2f, Pal.place);
     Drawf.square(ox, oy, 2f, Pal.accent);
 }
 
 @Override
 public void drawConfigure(){
-    Drawf.circles(x, y, 9f, Pal.accent);
+    float sin = Mathf.absin(Time.time, 4, 1);
+    Lines.stroke(1);
+    Drawf.circles(x, y, 9 + sin, Pal.accent);
     Drawf.dashCircle(x, y, range, Pal.accent);
 
-    // 已连接的 Core
     if(link != -1){
         Tile other = world.tile(link);
 
@@ -210,13 +207,10 @@ public void drawConfigure(){
         }
     }
 
-    // 范围内所有可以连接的 Core
     Groups.build.each(b -> {
         if(!(b instanceof CoreBlock.CoreBuild)) return;
         if(b.team != team) return;
         if(!within(b, range)) return;
-
-        // 当前连接的 Core 不画候选框
         if(b.pos() == link) return;
 
         Drawf.select(b.x, b.y, b.block.size * tilesize / 2f + 2f, Pal.breakInvalid);
