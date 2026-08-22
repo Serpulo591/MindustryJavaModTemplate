@@ -1,18 +1,20 @@
 package example.world.blocks;
 
-import arc.Core;
 import arc.graphics.*;
 import arc.graphics.g2d.*;
+import arc.math.Mathf;
+import arc.scene.style.TextureRegionDrawable;
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 import arc.struct.*;
-import arc.math.Mathf;
 import arc.util.Time;
 import arc.util.io.*;
+import mindustry.Vars;
 import mindustry.entities.TargetPriority;
 import mindustry.gen.*;
 import mindustry.graphics.*;
 import mindustry.type.*;
+import mindustry.ui.Styles;
 import mindustry.world.*;
 import mindustry.world.blocks.storage.CoreBlock;
 import mindustry.world.meta.*;
