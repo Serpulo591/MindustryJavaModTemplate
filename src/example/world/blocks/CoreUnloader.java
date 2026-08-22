@@ -75,6 +75,7 @@ public class CoreUnloader extends Block {
         public float transportCounter = 0f;
         public boolean hadValidLink;
         public Seq<Item> selectedItems = new Seq<>();
+        public int nextItemIndex = 0;
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
             Building b = other.build;
@@ -103,8 +104,14 @@ public void updateTile(){
     }
 
     CoreBlock.CoreBuild core = (CoreBlock.CoreBuild)other.build;
-    returnUnselected(core);
+    while(returnUnselected(core)){}
+
     if(items.total() >= itemCapacity){
+        transportCounter = 0f;
+        return;
+    }
+
+    if(selectedItems.isEmpty()){
         transportCounter = 0f;
         return;
     }
@@ -115,11 +122,14 @@ public void updateTile(){
             transportCounter = 0f;
             break;
         }
-
         Item item = null;
-        for(Item i : selectedItems){
-            if(core.items.has(i)){
-                item = i;
+        int size = selectedItems.size;
+        for(int offset = 0; offset < size; offset++){
+            int index = (nextItemIndex + offset) % size;
+            Item candidate = selectedItems.get(index);
+            if(core.items.has(candidate)){
+                item = candidate;
+                nextItemIndex = (index + 1) % size;
                 break;
             }
         }
