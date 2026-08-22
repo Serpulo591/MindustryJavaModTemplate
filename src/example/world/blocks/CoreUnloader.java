@@ -1,5 +1,7 @@
 package example.world.blocks;
 
+import arc.math.geom.Geometry;
+import arc.math.geom.Point2;
 import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.math.Mathf;
@@ -76,6 +78,7 @@ public class CoreUnloader extends Block {
         public boolean hadValidLink;
         public Seq<Item> selectedItems = new Seq<>();
         public int nextItemIndex = 0;
+        public int nextOutputIndex = 0;
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
             Building b = other.build;
@@ -87,6 +90,7 @@ public class CoreUnloader extends Block {
 
 @Override
 public void updateTile(){
+
     if(efficiency <= 0f){
         transportCounter = 0f;
         return;
@@ -98,27 +102,42 @@ public void updateTile(){
     }
 
     Tile other = world.tile(link);
+
     if(!linkValid(other)){
         transportCounter = 0f;
         return;
     }
 
     CoreBlock.CoreBuild core = (CoreBlock.CoreBuild)other.build;
+
+    // ① 输出到周围建筑
+    dumpItemsRoundRobin();
+
+    // ② 未选择的物品退回核心
     while(returnUnselected(core)){
     }
 
+    // ③ 没选择物品，不从核心提取
     if(selectedItems.isEmpty()){
         transportCounter = 0f;
         return;
     }
 
+    // ④ 从核心提取
     transportCounter += delta();
+
     while(transportCounter >= transportTime){
+
         Item item = null;
+
         int size = selectedItems.size;
+
         for(int offset = 0; offset < size; offset++){
-            int index = (nextItemIndex + offset) % size;
+
+            int index = (nextInputIndex + offset) % size;
+
             Item candidate = selectedItems.get(index);
+
             if(items.get(candidate) >= itemCapacity){
                 continue;
             }
@@ -128,7 +147,9 @@ public void updateTile(){
             }
 
             item = candidate;
-            nextItemIndex = (index + 1) % size;
+
+            nextInputIndex = (index + 1) % size;
+
             break;
         }
 
@@ -139,8 +160,8 @@ public void updateTile(){
 
         core.items.remove(item, 1);
         items.add(item, 1);
+
         transportCounter -= transportTime;
-        dumpAccumulate();
     }
 }
 
@@ -238,6 +259,38 @@ private boolean returnUnselected(CoreBlock.CoreBuild core){
     }
 
     return false;
+}
+
+private void dumpItemsRoundRobin(){
+    int itemCount = content.items().size;
+    if(itemCount <= 0) return;
+    for(int offset = 0; offset < itemCount; offset++){
+        int index = (nextItemIndex + offset) % itemCount;
+        Item item = content.items().get(index);
+        if(items.get(item) <= 0) continue;
+        nextItemIndex = (index + 1) % itemCount;
+        for(int dir = 0; dir < 4; dir++){
+            Point2 p = Geometry.d4(dir);
+            Tile targetTile = world.tile(
+                tile.x + p.x,
+                tile.y + p.y
+            );
+
+            if(targetTile == null || targetTile.build == null){
+                continue;
+            }
+
+            Building target = targetTile.build;
+            if(!target.acceptItem(this, item)){
+                continue;
+            }
+
+            target.handleItem(this, item);
+            items.remove(item, 1);
+        }
+
+        return;
+    }
 }
 
 @Override
