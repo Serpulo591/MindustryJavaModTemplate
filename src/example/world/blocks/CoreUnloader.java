@@ -90,6 +90,7 @@ public class CoreUnloader extends Block {
 
 @Override
 public void updateTile(){
+    // 效率或连接无效 → 停止
     if(efficiency <= 0f || link == -1){
         transportCounter = 0f;
         return;
@@ -103,14 +104,20 @@ public void updateTile(){
 
     CoreBlock.CoreBuild core = (CoreBlock.CoreBuild)other.build;
 
-    // ===== 1. 提取阶段：从核心拉取物品 =====
+    // ============================================================
+    // 1. 把不选中的物品送回核心
+    // ============================================================
     while(returnUnselected(core)){}
 
+    // 没有选中任何物品 → 停止
     if(selectedItems.isEmpty()){
         transportCounter = 0f;
         return;
     }
 
+    // ============================================================
+    // 2. 提取阶段：按 selectedItems 顺序从核心拉取物品
+    // ============================================================
     transportCounter += delta();
     while(transportCounter >= transportTime){
         Item item = getNextItemFromCore(core);
@@ -123,7 +130,9 @@ public void updateTile(){
         transportCounter -= transportTime;
     }
 
-    // ===== 2. 输出阶段：按 selectedItems 顺序轮询输出 =====
+    // ============================================================
+    // 3. 输出阶段：按 selectedItems 顺序轮询输出到周围
+    // ============================================================
     if(items.total() > 0 && !selectedItems.isEmpty()){
         int size = selectedItems.size;
         for(int i = 0; i < size; i++){
@@ -132,7 +141,7 @@ public void updateTile(){
             if(items.get(item) > 0){
                 outputToAdjacent(item);
                 outputIndex = (idx + 1) % size;
-                break;
+                break; // 每帧只输出一种物品，下一帧继续轮询
             }
         }
     }
