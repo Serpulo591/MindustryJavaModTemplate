@@ -79,7 +79,6 @@ public class CoreUnloader extends Block {
         public int pullIndex = 0;
         public int nextItemIndex = 0;
         public int outputIndex = 0;
-        public int directionIndex = 0;
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
             Building b = other.build;
@@ -203,9 +202,6 @@ private void outputToAdjacent(Item item){
             return;
         }
     }
-
-    // 没有任何目标能接收 → 重置方向索引（可选）
-    directionIndex = 0;
 }
 
 private Item getNextItemFromCore(CoreBlock.CoreBuild core){
