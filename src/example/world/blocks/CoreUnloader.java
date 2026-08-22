@@ -122,72 +122,76 @@ public void updateTile(){
 
 if(items.total() > 0 && !selectedItems.isEmpty()){
     int size = selectedItems.size;
-    for(int i = 0; i < size; i++){
-        int idx = (outputIndex + i) % size;
-        Item item = selectedItems.get(idx);
-        if(items.get(item) <= 0) continue;
-        if(outputToAdjacent(item)){
-            outputIndex = (idx + 1) % size;
+
+    // 每 tick 最多输出 10 个
+    for(int n = 0; n < 10; n++){
+
+        if(items.total() <= 0){
+            break;
         }
 
-        if(items.total() <= 0) break;
+        boolean output = false;
+
+        // 从当前物品开始轮询
+        for(int i = 0; i < size; i++){
+
+            int idx = (outputIndex + i) % size;
+            Item item = selectedItems.get(idx);
+
+            if(items.get(item) <= 0){
+                continue;
+            }
+
+            if(outputToAdjacent(item)){
+                outputIndex = (idx + 1) % size;
+                output = true;
+                break;
+            }
+        }
+
+        // 一个都输出不了，结束本 tick
+        if(!output){
+            break;
+        }
     }
 }
 }
 
-private boolean outputToAdjacent(Item item){
-    if(item == null || items.get(item) <= 0) return false;
-    int tx = tile.x;
-    int ty = tile.y;
+private void outputToAdjacent(Item item){
+    if(item == null || items.get(item) <= 0) return;
+
+    int tx = tile.x, ty = tile.y;
     int size = block.size;
-    boolean output = false;
+    IntSeq positions = new IntSeq();
     for(int x = tx; x < tx + size; x++){
-
-        if(tryOutput(x, ty + size, item)){
-            output = true;
-        }
-
-        if(items.get(item) <= 0) return output;
-
-        if(tryOutput(x, ty - 1, item)){
-            output = true;
-        }
-
-        if(items.get(item) <= 0) return output;
+        positions.add(Point2.pack(x, ty + size));
+        positions.add(Point2.pack(x, ty - 1));
     }
-
     for(int y = ty; y < ty + size; y++){
-
-        if(tryOutput(tx - 1, y, item)){
-            output = true;
-        }
-
-        if(items.get(item) <= 0) return output;
-
-        if(tryOutput(tx + size, y, item)){
-            output = true;
-        }
-
-        if(items.get(item) <= 0) return output;
+        positions.add(Point2.pack(tx - 1, y));
+        positions.add(Point2.pack(tx + size, y));
     }
 
-    return output;
-}
+    for(int i = 0; i < positions.size; i++){
+        int pos = positions.get(i);
+        Tile targetTile = world.tile(Point2.x(pos), Point2.y(pos));
+        if(targetTile == null || targetTile.build == null) continue;
 
-private boolean tryOutput(int x, int y, Item item){
-    Tile targetTile = world.tile(x, y);
-    if(targetTile == null || targetTile.build == null) return false;
-    Building target = targetTile.build;
-    if(target.team != team) return false;
-    Object cfg = target.config();
-    if(cfg instanceof Item targetItem){
-        if(targetItem != item) return false;
+        Building target = targetTile.build;
+        if(target.team != team) continue;
+
+        Object cfg = target.config();
+        if(cfg instanceof Item targetItem){
+            if(targetItem != item) continue;
+        }
+
+        if(target.acceptItem(this, item)){
+            int amount = Math.min(items.get(item), 1);
+            target.handleItem(this, item);
+            items.remove(item, amount);
+            return;
+        }
     }
-
-    if(!target.acceptItem(this, item)) return false;
-    target.handleItem(this, item);
-    items.remove(item, 1);
-    return true;
 }
 
 private Item getNextItemFromCore(CoreBlock.CoreBuild core){
