@@ -79,6 +79,8 @@ public class CoreUnloader extends Block {
         public int pullIndex = 0;
         public int nextItemIndex = 0;
         public int outputIndex = 0;
+        public int pullAmount = 10;
+        public int outputAmount = 10;
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
             Building b = other.build;
@@ -109,51 +111,54 @@ public void updateTile(){
     }
 
     transportCounter += delta();
-    while(transportCounter >= transportTime){
+    int pulled = 0;
+    while(
+        transportCounter >= transportTime &&
+        pulled < pullAmount &&
+        items.total() < itemCapacity
+    ){
         Item item = getNextItemFromCore(core);
         if(item == null){
             transportCounter = 0f;
             break;
         }
+
         core.items.remove(item, 1);
         items.add(item, 1);
         transportCounter -= transportTime;
+        pulled++;
     }
 
-if(items.total() > 0 && !selectedItems.isEmpty()){
-    int size = selectedItems.size;
-
-    // 每 tick 最多输出 10 个
-    for(int n = 0; n < 10; n++){
-
-        if(items.total() <= 0){
-            break;
-        }
-
-        boolean output = false;
-
-        // 从当前物品开始轮询
-        for(int i = 0; i < size; i++){
-
-            int idx = (outputIndex + i) % size;
-            Item item = selectedItems.get(idx);
-
-            if(items.get(item) <= 0){
-                continue;
+    if(items.total() > 0 && !selectedItems.isEmpty()){
+        int size = selectedItems.size;
+        for(int n = 0; n < outputAmount; n++){
+            if(items.total() <= 0){
+                break;
             }
 
-            outputToAdjacent(item);
-            outputIndex = (idx + 1) % size;
-            output = true;
-            break;
-        }
+            boolean found = false;
+            for(int i = 0; i < size; i++){
+                int idx = (outputIndex + i) % size;
+                Item item = selectedItems.get(idx);
+                if(items.get(item) <= 0){
+                    continue;
+                }
 
-        // 一个都输出不了，结束本 tick
-        if(!output){
-            break;
+                int before = items.get(item);
+                outputToAdjacent(item);
+                int after = items.get(item);
+                if(after < before){
+                    outputIndex = (idx + 1) % size;
+                    found = true;
+                    break;
+                }
+            }
+
+            if(!found){
+                break;
+            }
         }
     }
-}
 }
 
 private void outputToAdjacent(Item item){
