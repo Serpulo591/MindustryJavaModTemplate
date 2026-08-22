@@ -55,14 +55,26 @@ public class BridgeRouter extends Block {
         priority = TargetPriority.transport;
         delayLandingConfig = true;
 
-config(IntSeq.class, (BridgeRouterBuild tile, IntSeq seq) -> {
-    tile.links.clear();
-    for(int j = 0; j < seq.size; j += 2){
-        int dx = seq.get(j);
-        int dy = seq.get(j + 1);
-        int pos = Point2.pack(dx + tile.tileX(), dy + tile.tileY());
-        tile.links.add(pos);
+config(IntSeq.class, (BridgeRouterBuild build, IntSeq seq) -> {
+    build.links.clear();
+
+    for(int i = 0; i + 1 < seq.size; i += 2){
+        int dx = seq.get(i);
+        int dy = seq.get(i + 1);
+
+        int pos = Point2.pack(
+            build.tileX() + dx,
+            build.tileY() + dy
+        );
+
+        Tile target = world.tile(Point2.x(pos), Point2.y(pos));
+
+        if(target != null && build.linkValid(build.tile, target, false)){
+            build.links.add(pos);
+        }
     }
+
+    build.transportIndex = 0;
 });
     }
 
@@ -208,35 +220,38 @@ public boolean onConfigureBuildTapped(Building other) {
     if(other == this){
         links.clear();
         transportIndex = 0;
-        // ★ 强制触发配置保存 ★
-        configure(links);
         return false;
     }
 
     if(other instanceof BridgeRouterBuild b && linkValid(tile, other.tile)){
+
         int myPos = tile.pos();
         int otherPos = other.tile.pos();
 
         if(links.contains(otherPos)){
             links.removeValue(otherPos);
-            if(transportIndex >= links.size) transportIndex = 0;
-            // ★ 强制触发配置保存 ★
-            configure(links);
+
+            if(transportIndex >= links.size){
+                transportIndex = 0;
+            }
+
             return false;
         }
 
-        if(links.size >= maxLinks) return false;
+        if(links.size >= maxLinks){
+            return false;
+        }
 
         if(b.links.contains(myPos)){
             b.links.removeValue(myPos);
-            if(b.transportIndex >= b.links.size) b.transportIndex = 0;
-            // ★ 对方也强制保存 ★
-            b.configure(b.links);
+
+            if(b.transportIndex >= b.links.size){
+                b.transportIndex = 0;
+            }
         }
 
         links.add(otherPos);
-        // ★ 强制触发配置保存 ★
-        configure(links);
+
         return false;
     }
 
