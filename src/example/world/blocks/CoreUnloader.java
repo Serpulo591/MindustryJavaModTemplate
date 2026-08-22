@@ -1,14 +1,14 @@
 package example.world.blocks;
 
-import arc.scene.ui.ImageButton;
-import arc.scene.ui.ScrollPane;
-import arc.scene.layout.Table;
-import arc.scene.style.TextureRegionDrawable;
+import arc.Core;
 import arc.graphics.*;
 import arc.graphics.g2d.*;
+import arc.scene.ui.*;
+import arc.scene.ui.layout.*;
+import arc.struct.*;
 import arc.math.Mathf;
-import arc.util.io.*;
 import arc.util.Time;
+import arc.util.io.*;
 import mindustry.entities.TargetPriority;
 import mindustry.gen.*;
 import mindustry.graphics.*;
