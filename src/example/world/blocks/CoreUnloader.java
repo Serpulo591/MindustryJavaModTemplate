@@ -159,10 +159,15 @@ private Item getNextItemFromCore(CoreBlock.CoreBuild core){
             return false;
         }
 
-        @Override
-        public boolean canDump(Building to, Item item) {
-            return true;
-        }
+@Override
+public boolean canDump(Building to, Item item) {
+    Object cfg = to.config();
+    if (cfg instanceof Item targetItem) {
+        return targetItem == item;
+    }
+
+    return true;
+}
 
 @Override
 public void configure(Object value){
