@@ -115,10 +115,6 @@ transportCounter += delta();
 if(transportCounter >= transportTime){
     int amount = 0;
     while(amount < pullAmount){
-        if(items.total() >= itemCapacity){
-            break;
-        }
-
         Item item = getNextItemFromCore(core);
         if(item == null){
             break;
@@ -212,6 +208,7 @@ private Item getNextItemFromCore(CoreBlock.CoreBuild core){
             return item;
         }
     }
+
     pullIndex = 0;
     return null;
 }
