@@ -73,8 +73,8 @@ public class GlowBlocks {
         coreUnloader = new CoreUnloader("core-unloader") {{
             size = 2;
             health = 250;
-            consumePower(10f);
-            requirements(Category.distribution, ItemStack.with(GlowItems.cobalt, 60, Items.tungsten, 40)); // 使用 GlowItems
+            consumePower(3f);
+            requirements(Category.distribution, ItemStack.with(GlowItems.cobalt, 60, Items.tungsten, 40));
         }};
 
         warpBridge = new BridgeRouter("warp-bridge") {{
