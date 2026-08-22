@@ -108,17 +108,28 @@ public void updateTile(){
         return;
     }
 
-    transportCounter += delta();
-    while(transportCounter >= transportTime){
-        Item item = getNextItemFromCore(core);
-        if(item == null){
-            transportCounter = 0f;
+transportCounter += delta();
+
+if(transportCounter >= transportTime){
+    int amount = 0;
+
+    while(amount < 10){
+        if(items.total() >= itemCapacity){
             break;
         }
+
+        Item item = getNextItemFromCore(core);
+        if(item == null){
+            break;
+        }
+
         core.items.remove(item, 1);
         items.add(item, 1);
-        transportCounter -= transportTime;
+        amount++;
     }
+
+    transportCounter -= transportTime;
+}
 
 if(items.total() > 0 && !selectedItems.isEmpty()){
     int size = selectedItems.size;
