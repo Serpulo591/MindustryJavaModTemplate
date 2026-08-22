@@ -102,6 +102,7 @@ public void updateTile(){
 
     CoreBlock.CoreBuild core = (CoreBlock.CoreBuild)other.build;
 
+    // ===== 1. 提取阶段：从核心拉取物品 =====
     // 把不选中的物品送回核心
     while(returnUnselected(core)){}
 
@@ -120,8 +121,15 @@ public void updateTile(){
         core.items.remove(item, 1);
         items.add(item, 1);
         transportCounter -= transportTime;
-        // ★ 使用自定义输出方法，不依赖 dump ★
-        outputToAdjacent(item);
+    }
+
+    // ===== 2. 输出阶段：向周围输出 =====
+    if(items.total() > 0){
+        for(Item item : content.items()){
+            if(items.get(item) > 0){
+                outputToAdjacent(item);
+            }
+        }
     }
 }
 
