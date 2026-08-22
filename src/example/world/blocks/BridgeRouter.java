@@ -208,38 +208,35 @@ public boolean onConfigureBuildTapped(Building other) {
     if(other == this){
         links.clear();
         transportIndex = 0;
+        // ★ 强制触发配置保存 ★
+        configure(links);
         return false;
     }
 
     if(other instanceof BridgeRouterBuild b && linkValid(tile, other.tile)){
-
         int myPos = tile.pos();
         int otherPos = other.tile.pos();
 
         if(links.contains(otherPos)){
             links.removeValue(otherPos);
-
-            if(transportIndex >= links.size){
-                transportIndex = 0;
-            }
-
+            if(transportIndex >= links.size) transportIndex = 0;
+            // ★ 强制触发配置保存 ★
+            configure(links);
             return false;
         }
 
-        if(links.size >= maxLinks){
-            return false;
-        }
+        if(links.size >= maxLinks) return false;
 
         if(b.links.contains(myPos)){
             b.links.removeValue(myPos);
-
-            if(b.transportIndex >= b.links.size){
-                b.transportIndex = 0;
-            }
+            if(b.transportIndex >= b.links.size) b.transportIndex = 0;
+            // ★ 对方也强制保存 ★
+            b.configure(b.links);
         }
 
         links.add(otherPos);
-
+        // ★ 强制触发配置保存 ★
+        configure(links);
         return false;
     }
 
