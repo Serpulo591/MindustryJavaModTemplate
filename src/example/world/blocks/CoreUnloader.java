@@ -208,7 +208,7 @@ public void drawConfigure(){
         if(b.team != team) return;
         if(!within(b, range)) return;
         if(b.pos() == link) return;
-        Drawf.select( b.x, b.y, b.block.size * tilesize / 2f + 2f, Pal.breakInvalid);
+        Drawf.select(b.x, b.y, b.block.size * tilesize / 2f + 2f + sin, Pal.remove);
     });
     Draw.reset();
 }
