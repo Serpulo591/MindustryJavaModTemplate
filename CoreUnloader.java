@@ -111,20 +111,25 @@ public void updateTile(){
     }
 
 transportCounter += delta();
-
-if(transportCounter >= transportTime){
-    int amount = 0;
-    while(amount < pullAmount){
-        Item item = getNextItemFromCore(core);
-        if(item == null){
-            break;
-        }
-
-        core.items.remove(item, 1);
-        items.add(item, 1);
-        amount++;
+while(transportCounter >= transportTime){
+    Item item = getNextItemFromCore(core);
+    if(item == null){
+        transportCounter = 0f;
+        break;
     }
+
+    int maxTake = Math.min(pullAmount, core.items.get(item));
+    int space = itemCapacity - items.get(item);
+    int take = Math.min(maxTake, space);
+    if(take <= 0){
+        break;
+    }
+
+    core.items.remove(item, take);
+    items.add(item, take);
+    transportCounter -= transportTime;
 }
+
 if(items.total() > 0 && !selectedItems.isEmpty()){
     int size = selectedItems.size;
 
@@ -208,7 +213,6 @@ private Item getNextItemFromCore(CoreBlock.CoreBuild core){
             return item;
         }
     }
-
     pullIndex = 0;
     return null;
 }
