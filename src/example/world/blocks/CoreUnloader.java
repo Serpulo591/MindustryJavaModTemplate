@@ -79,6 +79,7 @@ public class CoreUnloader extends Block {
         public int pullIndex = 0;
         public int nextItemIndex = 0;
         public int outputIndex = 0;
+        public int outputPortIndex = 0;
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
             Building b = other.build;
@@ -147,14 +148,11 @@ if(items.total() > 0 && !selectedItems.isEmpty()){
 
             int after = items.get(item);
 
-            // 成功输出
             if(after < before){
                 outputIndex = (idx + 1) % size;
                 output = true;
                 break;
             }
-
-            // 输出失败：继续尝试下一个物品/出口
         }
 
         if(!output) break;
