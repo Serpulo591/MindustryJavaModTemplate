@@ -6,7 +6,7 @@ import mindustry.world.meta.StatCat;
 public class GlowStat extends Stat {
 
     public static final GlowStat bridgeConnections =
-        new GlowStat("bridgeConnections", StatCat.blocks);
+        new GlowStat("bridgeConnections", StatCat.function);
 
     public GlowStat(String name, StatCat category){
         super(name, category);
