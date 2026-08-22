@@ -79,7 +79,6 @@ public class CoreUnloader extends Block {
         public int pullIndex = 0;
         public int nextItemIndex = 0;
         public int outputIndex = 0;
-        public int pullAmount = 10;
         public int outputAmount = 10;
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
@@ -110,25 +109,17 @@ public void updateTile(){
         return;
     }
 
-transportCounter += delta();
-while(transportCounter >= transportTime){
-    Item item = getNextItemFromCore(core);
-    if(item == null){
-        transportCounter = 0f;
-        break;
+    transportCounter += delta();
+    while(transportCounter >= transportTime){
+        Item item = getNextItemFromCore(core);
+        if(item == null){
+            transportCounter = 0f;
+            break;
+        }
+        core.items.remove(item, 1);
+        items.add(item, 1);
+        transportCounter -= transportTime;
     }
-
-    int maxTake = Math.min(pullAmount, core.items.get(item));
-    int space = itemCapacity - items.get(item);
-    int take = Math.min(maxTake, space);
-    if(take <= 0){
-        break;
-    }
-
-    core.items.remove(item, take);
-    items.add(item, take);
-    transportCounter -= transportTime;
-}
 
 if(items.total() > 0 && !selectedItems.isEmpty()){
     int size = selectedItems.size;
