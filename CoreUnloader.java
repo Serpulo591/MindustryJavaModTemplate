@@ -79,6 +79,7 @@ public class CoreUnloader extends Block {
         public int pullIndex = 0;
         public int nextItemIndex = 0;
         public int outputIndex = 0;
+        public int pullAmount = 10;
         public int outputAmount = 10;
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
@@ -125,7 +126,7 @@ if(items.total() > 0 && !selectedItems.isEmpty()){
     int size = selectedItems.size;
 
     // 每 tick 最多输出 10 个
-    for(int n = 0; n < outputAmount; n++){
+    for(int n = 0; n < 10; n++){
 
         if(items.total() <= 0){
             break;
