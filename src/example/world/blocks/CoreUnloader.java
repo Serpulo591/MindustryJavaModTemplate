@@ -76,6 +76,7 @@ public class CoreUnloader extends Block {
         public float transportCounter = 0f;
         public boolean hadValidLink;
         public Seq<Item> selectedItems = new Seq<>();
+        public int pullIndex = 0;
         public int nextItemIndex = 0;
         public int outputIndex = 0;
         public boolean linkValid(Tile other) {
@@ -181,14 +182,14 @@ private void outputToAdjacent(Item item){
 private Item getNextItemFromCore(CoreBlock.CoreBuild core){
     int size = selectedItems.size;
     for(int i = 0; i < size; i++){
-        int idx = (outputIndex + i) % size;
+        int idx = (pullIndex + i) % size;
         Item item = selectedItems.get(idx);
         if(items.get(item) < itemCapacity && core.items.has(item)){
-            outputIndex = (idx + 1) % size;
+            pullIndex = (idx + 1) % size;
             return item;
         }
     }
-    outputIndex = 0;
+    pullIndex = 0;
     return null;
 }
 
