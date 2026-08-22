@@ -24,7 +24,7 @@ import static mindustry.Vars.*;
 
 public class CoreUnloader extends Block {
     public int range = 250;
-    public float transportTime = 1f;
+    public float transportTime = 0.1f;
 
     public CoreUnloader(String name) {
         super(name);
@@ -79,8 +79,6 @@ public class CoreUnloader extends Block {
         public int pullIndex = 0;
         public int nextItemIndex = 0;
         public int outputIndex = 0;
-        public int pullAmount = 10;
-        public int outputAmount = 10;
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
             Building b = other.build;
@@ -122,40 +120,18 @@ public void updateTile(){
         transportCounter -= transportTime;
     }
 
-if(items.total() > 0 && !selectedItems.isEmpty()){
-    int size = selectedItems.size;
-
-    // 每 tick 最多输出 10 个
-    for(int n = 0; n < 10; n++){
-
-        if(items.total() <= 0){
-            break;
-        }
-
-        boolean output = false;
-
-        // 从当前物品开始轮询
+    if(items.total() > 0 && !selectedItems.isEmpty()){
+        int size = selectedItems.size;
         for(int i = 0; i < size; i++){
-
             int idx = (outputIndex + i) % size;
             Item item = selectedItems.get(idx);
-
-            if(items.get(item) <= 0){
-                continue;
+            if(items.get(item) > 0){
+                outputToAdjacent(item);
+                outputIndex = (idx + 1) % size;
+                break;
             }
-
-            outputToAdjacent(item);
-            outputIndex = (idx + 1) % size;
-            output = true;
-            break;
-        }
-
-        // 一个都输出不了，结束本 tick
-        if(!output){
-            break;
         }
     }
-}
 }
 
 private void outputToAdjacent(Item item){
