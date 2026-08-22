@@ -77,8 +77,9 @@ public class CoreUnloader extends Block {
         public float transportCounter = 0f;
         public boolean hadValidLink;
         public Seq<Item> selectedItems = new Seq<>();
-        public int nextItemIndex = 0;
+        public int nextInputIndex = 0;
         public int nextOutputIndex = 0;
+
         public boolean linkValid(Tile other) {
             if (other == null || other.build == null) return false;
             Building b = other.build;
@@ -88,82 +89,67 @@ public class CoreUnloader extends Block {
             return dx * dx + dy * dy <= range * range;
         }
 
-@Override
-public void updateTile(){
-
-    if(efficiency <= 0f){
-        transportCounter = 0f;
-        return;
-    }
-
-    if(link == -1){
-        transportCounter = 0f;
-        return;
-    }
-
-    Tile other = world.tile(link);
-
-    if(!linkValid(other)){
-        transportCounter = 0f;
-        return;
-    }
-
-    CoreBlock.CoreBuild core = (CoreBlock.CoreBuild)other.build;
-
-    // ① 输出到周围建筑
-    dumpItemsRoundRobin();
-
-    // ② 未选择的物品退回核心
-    while(returnUnselected(core)){
-    }
-
-    // ③ 没选择物品，不从核心提取
-    if(selectedItems.isEmpty()){
-        transportCounter = 0f;
-        return;
-    }
-
-    // ④ 从核心提取
-    transportCounter += delta();
-
-    while(transportCounter >= transportTime){
-
-        Item item = null;
-
-        int size = selectedItems.size;
-
-        for(int offset = 0; offset < size; offset++){
-
-            int index = (nextInputIndex + offset) % size;
-
-            Item candidate = selectedItems.get(index);
-
-            if(items.get(candidate) >= itemCapacity){
-                continue;
+        @Override
+        public void updateTile() {
+            if (efficiency <= 0f) {
+                transportCounter = 0f;
+                return;
             }
 
-            if(!core.items.has(candidate)){
-                continue;
+            if (link == -1) {
+                transportCounter = 0f;
+                return;
             }
 
-            item = candidate;
+            Tile other = world.tile(link);
+            if (!linkValid(other)) {
+                transportCounter = 0f;
+                return;
+            }
 
-            nextInputIndex = (index + 1) % size;
+            CoreBlock.CoreBuild core = (CoreBlock.CoreBuild)other.build;
 
-            break;
+            dumpItemsRoundRobin();
+            returnUnselected(core);
+
+            if (selectedItems.isEmpty()) {
+                transportCounter = 0f;
+                return;
+            }
+
+            transportCounter += delta();
+
+            while (transportCounter >= transportTime) {
+                if (items.total() >= itemCapacity) {
+                    transportCounter = 0f;
+                    break;
+                }
+
+                Item item = null;
+                int size = selectedItems.size;
+
+                for (int offset = 0; offset < size; offset++) {
+                    int index = (nextInputIndex + offset) % size;
+                    Item candidate = selectedItems.get(index);
+
+                    if (items.get(candidate) >= itemCapacity) continue;
+                    if (!core.items.has(candidate)) continue;
+
+                    item = candidate;
+                    nextInputIndex = (index + 1) % size;
+                    break;
+                }
+
+                if (item == null) {
+                    transportCounter = 0f;
+                    break;
+                }
+
+                core.items.remove(item, 1);
+                items.add(item, 1);
+                transportCounter -= transportTime;
+            }
         }
-
-        if(item == null){
-            transportCounter = 0f;
-            break;
-        }
-
-        core.items.remove(item, 1);
-        items.add(item, 1);
-
-        transportCounter -= transportTime;
-    }
-}
 
         @Override
         public boolean acceptItem(Building source, Item item) {
@@ -175,219 +161,235 @@ public void updateTile(){
             return true;
         }
 
-@Override
-public void configure(Object value){
-    if(value instanceof Integer i){
-        link = i;
-    }else{
-        link = -1;
-    }
-
-    transportCounter = 0f;
-}
+        @Override
+        public void configure(Object value) {
+            if (value instanceof Integer i) {
+                link = i;
+            } else {
+                link = -1;
+            }
+            transportCounter = 0f;
+        }
 
         @Override
         public Object config() {
             return link;
         }
 
-@Override
-public void buildConfiguration(Table table){
-    table.clear();
-    table.top();
-    Table cont = new Table();
-    cont.top();
-    cont.defaults().size(40);
-    int column = 0;
-    for(Item item : content.items()){
-        if(!item.unlockedNow()) continue;
-        if(!item.isOnPlanet(Vars.state.getPlanet())) continue;
-        if(item.isHidden()) continue;
-        ImageButton button = cont.button(
-            Tex.whiteui,
-            Styles.clearNoneTogglei,
-            Mathf.clamp(item.selectionSize, 0, 40),
-            () -> {}
-        ).tooltip(item.localizedName).get();
-        button.getStyle().imageUp =
-            new TextureRegionDrawable(item.uiIcon);
-        button.changed(() -> {
-            if(button.isChecked()){
-                if(!selectedItems.contains(item)){
-                    selectedItems.add(item);
+        @Override
+        public void buildConfiguration(Table table) {
+            table.clear();
+            table.top();
+            Table cont = new Table();
+            cont.top();
+            cont.defaults().size(40);
+            int column = 0;
+
+            for (Item item : content.items()) {
+                if (!item.unlockedNow()) continue;
+                if (!item.isOnPlanet(Vars.state.getPlanet())) continue;
+                if (item.isHidden()) continue;
+
+                ImageButton button = cont.button(
+                    Tex.whiteui,
+                    Styles.clearNoneTogglei,
+                    Mathf.clamp(item.selectionSize, 0, 40),
+                    () -> {}
+                ).tooltip(item.localizedName).get();
+
+                button.getStyle().imageUp = new TextureRegionDrawable(item.uiIcon);
+
+                button.changed(() -> {
+                    if (button.isChecked()) {
+                        if (!selectedItems.contains(item)) {
+                            selectedItems.add(item);
+                        }
+                    } else {
+                        selectedItems.remove(item);
+                    }
+                });
+
+                button.update(() -> {
+                    button.setChecked(selectedItems.contains(item));
+                });
+
+                column++;
+
+                if (column >= 4) {
+                    cont.row();
+                    column = 0;
                 }
-            }else{
-                selectedItems.remove(item);
-            }
-        });
-        button.update(() -> {
-            button.setChecked(selectedItems.contains(item));
-        });
-        column++;
-        if(column >= 4){
-            cont.row();
-            column = 0;
-        }
-    }
-    Table main = new Table();
-    main.background(Styles.black6);
-    ScrollPane pane = new ScrollPane(cont, Styles.smallPane);
-    pane.setScrollingDisabled(true, false);
-    pane.setOverscroll(false, false);
-    main.add(pane)
-        .maxHeight(40 * 5)
-        .growX();
-    table.add(main).growX();
-}
-
-private boolean isSelected(Item item){
-    return selectedItems.contains(item);
-}
-
-private boolean returnUnselected(CoreBlock.CoreBuild core){
-    for(Item item : content.items()){
-        if(isSelected(item)) continue;
-
-        int amount = items.get(item);
-        if(amount <= 0) continue;
-
-        if(core.acceptItem(this, item)){
-            core.handleItem(this, item);
-            items.remove(item, 1);
-            return true;
-        }
-    }
-
-    return false;
-}
-
-private void dumpItemsRoundRobin(){
-    int itemCount = content.items().size;
-    if(itemCount <= 0) return;
-    for(int offset = 0; offset < itemCount; offset++){
-        int index = (nextItemIndex + offset) % itemCount;
-        Item item = content.items().get(index);
-        if(items.get(item) <= 0) continue;
-        nextItemIndex = (index + 1) % itemCount;
-        for(int dir = 0; dir < 4; dir++){
-            Point2 p = Geometry.d4(dir);
-            Tile targetTile = world.tile(
-                tile.x + p.x,
-                tile.y + p.y
-            );
-
-            if(targetTile == null || targetTile.build == null){
-                continue;
             }
 
-            Building target = targetTile.build;
-            if(!target.acceptItem(this, item)){
-                continue;
-            }
+            Table main = new Table();
+            main.background(Styles.black6);
 
-            target.handleItem(this, item);
-            items.remove(item, 1);
+            ScrollPane pane = new ScrollPane(cont, Styles.smallPane);
+            pane.setScrollingDisabled(true, false);
+            pane.setOverscroll(false, false);
+
+            main.add(pane)
+                .maxHeight(40 * 5)
+                .growX();
+
+            table.add(main).growX();
         }
 
-        return;
-    }
-}
-
-@Override
-public boolean onConfigureBuildTapped(Building other){
-
-    if(other == this){
-
-        if(selectedItems.size == 0){
-
-            for(Item item : content.items()){
-                if(!item.unlockedNow()) continue;
-                if(item.isHidden()) continue;
-
-                selectedItems.add(item);
-            }
-
-        }else{
-
-            selectedItems.clear();
+        private boolean isSelected(Item item) {
+            return selectedItems.contains(item);
         }
 
-        return false;
-    }
+        private boolean returnUnselected(CoreBlock.CoreBuild core) {
+            for (Item item : content.items()) {
+                if (isSelected(item)) continue;
 
-    if(other instanceof CoreBlock.CoreBuild && other.team == team){
+                int amount = items.get(item);
+                if (amount <= 0) continue;
 
-        if(dst(other) <= range){
-
-            if(link == other.pos()){
-                configure(-1);
-            }else{
-                configure(other.pos());
+                if (core.acceptItem(this, item)) {
+                    core.handleItem(this, item);
+                    items.remove(item, 1);
+                    return true;
+                }
             }
 
             return false;
         }
-    }
 
-    return true;
-}
+        private void dumpItemsRoundRobin() {
+            int itemCount = content.items().size;
+            if (itemCount <= 0) return;
 
-private void drawInput(Tile other){
-    if(!linkValid(other)) return;
-    float tx = tile.drawx();
-    float ty = tile.drawy();
-    float ox = other.drawx();
-    float oy = other.drawy();
-    Drawf.dashLine(Pal.accent, tx, ty, ox, oy);
-    Drawf.select(ox, oy, other.block().size * tilesize / 2f + 2f, Pal.place);
-    Drawf.square(ox, oy, 2f, Pal.accent);
-}
+            for (int offset = 0; offset < itemCount; offset++) {
+                int index = (nextOutputIndex + offset) % itemCount;
+                Item item = content.items().get(index);
 
-@Override
-public void drawConfigure(){
-    float sin = Mathf.absin(Time.time, 4f, 1f);
-    Lines.stroke(1f);
-    Drawf.circles(x, y, 9f + sin, Pal.accent);
-    Drawf.dashCircle(x, y, range * tilesize, Pal.accent);
+                if (items.get(item) <= 0) continue;
 
-    if(link != -1){
-        Tile other = world.tile(link);
-        if(other != null && linkValid(other)){
-            drawInput(other);
+                nextOutputIndex = (index + 1) % itemCount;
+
+                for (int dir = 0; dir < 4; dir++) {
+                    Point2 p = Geometry.d4(dir);
+                    Tile targetTile = world.tile(tile.x + p.x, tile.y + p.y);
+
+                    if (targetTile == null || targetTile.build == null) continue;
+
+                    Building target = targetTile.build;
+
+                    if (!target.acceptItem(this, item)) continue;
+
+                    target.handleItem(this, item);
+                    items.remove(item, 1);
+                }
+
+                return;
+            }
         }
-    }
-    Groups.build.each(b -> {
-        if(!(b instanceof CoreBlock.CoreBuild)) return;
-        if(b.team != team) return;
-        if(!within(b, range)) return;
-        if(b.pos() == link) return;
-        Drawf.select(b.x, b.y, b.block.size * tilesize / 2f + 2f + sin, Pal.remove);
-    });
-    Draw.reset();
-}
 
-@Override
-public void write(Writes write){
-    super.write(write);
-    write.i(link);
-    write.s(selectedItems.size);
-    for(Item item : selectedItems){
-        write.i(item.id);
-    }
-}
+        @Override
+        public boolean onConfigureBuildTapped(Building other) {
+            if (other == this) {
+                if (selectedItems.size == 0) {
+                    for (Item item : content.items()) {
+                        if (!item.unlockedNow()) continue;
+                        if (item.isHidden()) continue;
+                        selectedItems.add(item);
+                    }
+                } else {
+                    selectedItems.clear();
+                }
 
-@Override
-public void read(Reads read, byte revision){
-    super.read(read, revision);
-    link = read.i();
-    selectedItems.clear();
-    int size = read.s();
-    for(int i = 0; i < size; i++){
-        Item item = content.item(read.i());
-        if(item != null){
-            selectedItems.add(item);
+                return false;
+            }
+
+            if (other instanceof CoreBlock.CoreBuild && other.team == team) {
+                if (dst(other) <= range) {
+                    if (link == other.pos()) {
+                        configure(-1);
+                    } else {
+                        configure(other.pos());
+                    }
+
+                    return false;
+                }
+            }
+
+            return true;
         }
-    }
-}
+
+        private void drawInput(Tile other) {
+            if (!linkValid(other)) return;
+
+            float tx = tile.drawx();
+            float ty = tile.drawy();
+            float ox = other.drawx();
+            float oy = other.drawy();
+
+            Drawf.dashLine(Pal.accent, tx, ty, ox, oy);
+            Drawf.select(ox, oy, other.block().size * tilesize / 2f + 2f, Pal.place);
+            Drawf.square(ox, oy, 2f, Pal.accent);
+        }
+
+        @Override
+        public void drawConfigure() {
+            float sin = Mathf.absin(Time.time, 4f, 1f);
+
+            Lines.stroke(1f);
+            Drawf.circles(x, y, 9f + sin, Pal.accent);
+            Drawf.dashCircle(x, y, range * tilesize, Pal.accent);
+
+            if (link != -1) {
+                Tile other = world.tile(link);
+
+                if (other != null && linkValid(other)) {
+                    drawInput(other);
+                }
+            }
+
+            Groups.build.each(b -> {
+                if (!(b instanceof CoreBlock.CoreBuild)) return;
+                if (b.team != team) return;
+                if (!within(b, range)) return;
+                if (b.pos() == link) return;
+
+                Drawf.select(
+                    b.x,
+                    b.y,
+                    b.block.size * tilesize / 2f + 2f + sin,
+                    Pal.remove
+                );
+            });
+
+            Draw.reset();
+        }
+
+        @Override
+        public void write(Writes write) {
+            super.write(write);
+            write.i(link);
+            write.s(selectedItems.size);
+
+            for (Item item : selectedItems) {
+                write.i(item.id);
+            }
+        }
+
+        @Override
+        public void read(Reads read, byte revision) {
+            super.read(read, revision);
+
+            link = read.i();
+            selectedItems.clear();
+
+            int size = read.s();
+
+            for (int i = 0; i < size; i++) {
+                Item item = content.item(read.i());
+
+                if (item != null) {
+                    selectedItems.add(item);
+                }
+            }
+        }
     }
 }
