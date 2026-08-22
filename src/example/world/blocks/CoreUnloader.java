@@ -147,45 +147,45 @@ public void updateTile(){
     }
 }
 
-// ★ 自定义输出方法：遍历周围建筑，按配置匹配输出 ★
 private void outputToAdjacent(Item item){
     if(item == null || items.get(item) <= 0) return;
 
     int tx = tile.x, ty = tile.y;
     int size = block.size;
-    // 收集周围所有相邻格子的坐标（包括对角？不，只上下左右）
     IntSeq positions = new IntSeq();
     for(int x = tx; x < tx + size; x++){
-        positions.add(Point2.pack(x, ty + size)); // 下方
-        positions.add(Point2.pack(x, ty - 1));    // 上方
+        positions.add(Point2.pack(x, ty + size));
+        positions.add(Point2.pack(x, ty - 1));
     }
     for(int y = ty; y < ty + size; y++){
-        positions.add(Point2.pack(tx - 1, y));    // 左方
-        positions.add(Point2.pack(tx + size, y)); // 右方
+        positions.add(Point2.pack(tx - 1, y));
+        positions.add(Point2.pack(tx + size, y));
     }
 
-    for(int i = 0; i < positions.size; i++){
-        int pos = positions.get(i);
+    int total = positions.size;
+    for(int i = 0; i < total; i++){
+        int idx = (directionIndex + i) % total;
+        int pos = positions.get(idx);
         Tile targetTile = world.tile(Point2.x(pos), Point2.y(pos));
         if(targetTile == null || targetTile.build == null) continue;
 
         Building target = targetTile.build;
         if(target.team != team) continue;
 
-        // ★ 检测目标配置：如果配置了物品，必须匹配才输出 ★
         Object cfg = target.config();
-        if(cfg instanceof Item targetItem){
-            if(targetItem != item) continue; // 不匹配则跳过
-        }
+        if(cfg instanceof Item targetItem && targetItem != item) continue;
 
-        // 检查目标是否可以接收
         if(target.acceptItem(this, item)){
             int amount = Math.min(items.get(item), 1);
             target.handleItem(this, item);
             items.remove(item, amount);
-            return; // 输出一个就结束
+            // ★ 记录下次从下一个位置开始 ★
+            directionIndex = (idx + 1) % total;
+            return;
         }
     }
+    // 所有位置都不可用，重置
+    directionIndex = 0;
 }
 
 private Item getNextItemFromCore(CoreBlock.CoreBuild core){
