@@ -24,7 +24,7 @@ import static mindustry.Vars.*;
 
 public class CoreUnloader extends Block {
     public int range = 250;
-    public float transportTime = 0.1f;
+    public float transportTime = 1f;
 
     public CoreUnloader(String name) {
         super(name);
@@ -120,18 +120,29 @@ public void updateTile(){
         transportCounter -= transportTime;
     }
 
-    if(items.total() > 0 && !selectedItems.isEmpty()){
-        int size = selectedItems.size;
+if(items.total() > 0 && !selectedItems.isEmpty()){
+    int size = selectedItems.size;
+
+    for(int n = 0; n < 10; n++){
+        if(items.total() <= 0) break;
+
+        boolean output = false;
+
         for(int i = 0; i < size; i++){
             int idx = (outputIndex + i) % size;
             Item item = selectedItems.get(idx);
-            if(items.get(item) > 0){
-                outputToAdjacent(item);
-                outputIndex = (idx + 1) % size;
-                break;
-            }
+
+            if(items.get(item) <= 0) continue;
+
+            outputToAdjacent(item);
+            outputIndex = (idx + 1) % size;
+            output = true;
+            break;
         }
+
+        if(!output) break;
     }
+}
 }
 
 private void outputToAdjacent(Item item){
