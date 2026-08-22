@@ -67,25 +67,20 @@ public class BridgeRouter extends Block {
                 tile.links.add(i);
             }
         });
-        config(IntSeq.class, (BridgeRouterBuild build, IntSeq seq) -> {
-            build.links.clear();
+config(Point2.class, (BridgeRouterBuild build, Point2 point) -> {
+    build.links.clear();
 
-            for(int j = 0; j + 1 < seq.size; j += 2){
-                int dx = seq.get(j);
-                int dy = seq.get(j + 1);
+    if(point != null){
+        int pos = Point2.pack(
+            build.tileX() + point.x,
+            build.tileY() + point.y
+        );
 
-                int pos = Point2.pack(
-                    build.tileX() + dx,
-                    build.tileY() + dy
-                );
+        build.links.add(pos);
+    }
 
-                build.links.add(pos);
-            }
-
-            if(build.transportIndex >= build.links.size){
-                build.transportIndex = 0;
-            }
-        });
+    build.transportIndex = 0;
+});
     }
 
 @Override
@@ -563,45 +558,17 @@ protected boolean checkAccept(Building source){
         }
 
 @Override
-public void configure(Object value){
-    if(value instanceof IntSeq seq){
-        links.clear();
-
-        for(int j = 0; j + 1 < seq.size; j += 2){
-            int dx = seq.get(j);
-            int dy = seq.get(j + 1);
-
-            int pos = Point2.pack(
-                tile.x + dx,
-                tile.y + dy
-            );
-
-            links.add(pos);
-        }
-
-        if(transportIndex >= links.size){
-            transportIndex = 0;
-        }
+public Point2 config(){
+    if(links.isEmpty()){
+        return new Point2(0, 0);
     }
 
-    transportCounter = 0f;
-}
+    int pos = links.get(0);
 
-@Override
-public Object config(){
-    IntSeq seq = new IntSeq();
-
-    for(int i = 0; i < links.size; i++){
-        int pos = links.get(i);
-
-        int dx = Point2.x(pos) - tile.x;
-        int dy = Point2.y(pos) - tile.y;
-
-        seq.add(dx);
-        seq.add(dy);
-    }
-
-    return seq;
+    return new Point2(
+        Point2.x(pos) - tile.x,
+        Point2.y(pos) - tile.y
+    );
 }
 
         @Override
