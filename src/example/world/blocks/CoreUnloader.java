@@ -86,21 +86,6 @@ public class CoreUnloader extends Block {
             return dx * dx + dy * dy <= range * range;
         }
 
-public Item getDumpItem(){
-    if(selectedItems.isEmpty()) return null;
-    int size = selectedItems.size;
-    for(int i = 0; i < size; i++){
-        int idx = (outputIndex + i) % size;
-        Item item = selectedItems.get(idx);
-        if(items.get(item) > 0){
-            outputIndex = (idx + 1) % size;
-            return item;
-        }
-    }
-    outputIndex = 0;
-    return null;
-}
-
 @Override
 public void updateTile(){
     if(efficiency <= 0f || link == -1){
@@ -126,7 +111,6 @@ public void updateTile(){
 
     transportCounter += delta();
     while(transportCounter >= transportTime){
-        // 按轮询顺序获取一个物品
         Item item = getNextItemFromCore(core);
         if(item == null){
             transportCounter = 0f;
@@ -135,8 +119,49 @@ public void updateTile(){
         core.items.remove(item, 1);
         items.add(item, 1);
         transportCounter -= transportTime;
-        // 立即输出一个物品到周围
-        dump(item);
+        // ★ 使用自定义输出方法，不依赖 dump ★
+        outputToAdjacent(item);
+    }
+}
+
+// ★ 自定义输出方法：遍历周围建筑，按配置匹配输出 ★
+private void outputToAdjacent(Item item){
+    if(item == null || items.get(item) <= 0) return;
+
+    int tx = tile.x, ty = tile.y;
+    int size = block.size;
+    // 收集周围所有相邻格子的坐标（包括对角？不，只上下左右）
+    IntSeq positions = new IntSeq();
+    for(int x = tx; x < tx + size; x++){
+        positions.add(Point2.pack(x, ty + size)); // 下方
+        positions.add(Point2.pack(x, ty - 1));    // 上方
+    }
+    for(int y = ty; y < ty + size; y++){
+        positions.add(Point2.pack(tx - 1, y));    // 左方
+        positions.add(Point2.pack(tx + size, y)); // 右方
+    }
+
+    for(int i = 0; i < positions.size; i++){
+        int pos = positions.get(i);
+        Tile targetTile = world.tile(Point2.x(pos), Point2.y(pos));
+        if(targetTile == null || targetTile.build == null) continue;
+
+        Building target = targetTile.build;
+        if(target.team != team) continue;
+
+        // ★ 检测目标配置：如果配置了物品，必须匹配才输出 ★
+        Object cfg = target.config();
+        if(cfg instanceof Item targetItem){
+            if(targetItem != item) continue; // 不匹配则跳过
+        }
+
+        // 检查目标是否可以接收
+        if(target.acceptItem(this, item)){
+            int amount = Math.min(items.get(item), 1);
+            target.handleItem(this, item);
+            items.remove(item, amount);
+            return; // 输出一个就结束
+        }
     }
 }
 
@@ -158,16 +183,6 @@ private Item getNextItemFromCore(CoreBlock.CoreBuild core){
         public boolean acceptItem(Building source, Item item) {
             return false;
         }
-
-@Override
-public boolean canDump(Building to, Item item) {
-    Object cfg = to.config();
-    if (cfg instanceof Item targetItem) {
-        return targetItem == item;
-    }
-
-    return true;
-}
 
 @Override
 public void configure(Object value){
