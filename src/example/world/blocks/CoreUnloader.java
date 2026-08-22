@@ -142,7 +142,7 @@ if(items.total() > 0 && !selectedItems.isEmpty()){
                 continue;
             }
 
-            outputToAdjacent(item)
+            outputToAdjacent(item);
             outputIndex = (idx + 1) % size;
             output = true;
             break;
