@@ -97,32 +97,26 @@ public void updateTile(){
     }
 
     Tile other = world.tile(link);
-
     if(!linkValid(other)){
         transportCounter = 0f;
         return;
     }
 
     CoreBlock.CoreBuild core = (CoreBlock.CoreBuild)other.build;
-
-    returnUnselectedItems(core);
-
+    returnUnselected(core);
     if(items.total() >= itemCapacity){
         transportCounter = 0f;
         return;
     }
 
     transportCounter += delta();
-
     while(transportCounter >= transportTime){
-
         if(items.total() >= itemCapacity){
             transportCounter = 0f;
             break;
         }
 
         Item item = null;
-
         for(Item i : selectedItems){
             if(core.items.has(i)){
                 item = i;
@@ -137,9 +131,7 @@ public void updateTile(){
 
         core.items.remove(item, 1);
         items.add(item, 1);
-
         transportCounter -= transportTime;
-
         dumpAccumulate();
     }
 }
@@ -219,20 +211,25 @@ public void buildConfiguration(Table table){
     table.add(main).growX();
 }
 
-private boolean returnUnselectedItems(CoreBlock.CoreBuild core){
-    boolean moved = false;
+private boolean isSelected(Item item){
+    return selectedItems.contains(item);
+}
+
+private boolean returnUnselected(CoreBlock.CoreBuild core){
     for(Item item : content.items()){
-        if(selectedItems.contains(item)) continue;
+        if(isSelected(item)) continue;
+
         int amount = items.get(item);
         if(amount <= 0) continue;
+
         if(core.acceptItem(this, item)){
-            items.remove(item, 1);
             core.handleItem(this, item);
-            moved = true;
+            items.remove(item, 1);
+            return true;
         }
     }
 
-    return moved;
+    return false;
 }
 
 @Override
