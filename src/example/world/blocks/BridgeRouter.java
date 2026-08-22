@@ -67,13 +67,23 @@ public class BridgeRouter extends Block {
                 tile.links.add(i);
             }
         });
-        config(IntSeq.class, (BridgeRouterBuild tile, IntSeq seq) -> {
-            tile.links.clear();
-            for(int j = 0; j < seq.size; j += 2){
+        config(IntSeq.class, (BridgeRouterBuild build, IntSeq seq) -> {
+            build.links.clear();
+
+            for(int j = 0; j + 1 < seq.size; j += 2){
                 int dx = seq.get(j);
                 int dy = seq.get(j + 1);
-                int pos = Point2.pack(dx + tile.tileX(), dy + tile.tileY());
-                tile.links.add(pos);
+
+                int pos = Point2.pack(
+                    build.tileX() + dx,
+                    build.tileY() + dy
+                );
+
+                build.links.add(pos);
+            }
+
+            if(build.transportIndex >= build.links.size){
+                build.transportIndex = 0;
             }
         });
     }
@@ -554,16 +564,24 @@ protected boolean checkAccept(Building source){
 
 @Override
 public void configure(Object value){
-    if(value instanceof Point2 point){
-        link = Point2.pack(
-            tile.x + point.x,
-            tile.y + point.y
-        );
-    }else if(value instanceof Integer i){
-        // 保留你原来的手动连接兼容
-        link = i;
-    }else{
-        link = -1;
+    if(value instanceof IntSeq seq){
+        links.clear();
+
+        for(int j = 0; j + 1 < seq.size; j += 2){
+            int dx = seq.get(j);
+            int dy = seq.get(j + 1);
+
+            int pos = Point2.pack(
+                tile.x + dx,
+                tile.y + dy
+            );
+
+            links.add(pos);
+        }
+
+        if(transportIndex >= links.size){
+            transportIndex = 0;
+        }
     }
 
     transportCounter = 0f;
@@ -571,14 +589,19 @@ public void configure(Object value){
 
 @Override
 public Object config(){
-    if(link == -1){
-        return new Point2(0, 0);
+    IntSeq seq = new IntSeq();
+
+    for(int i = 0; i < links.size; i++){
+        int pos = links.get(i);
+
+        int dx = Point2.x(pos) - tile.x;
+        int dy = Point2.y(pos) - tile.y;
+
+        seq.add(dx);
+        seq.add(dy);
     }
 
-    return new Point2(
-        Point2.x(link) - tile.x,
-        Point2.y(link) - tile.y
-    );
+    return seq;
 }
 
         @Override
