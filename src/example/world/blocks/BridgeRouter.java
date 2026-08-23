@@ -71,16 +71,13 @@ config(Integer.class, (BridgeRouterBuild tile, Integer i) -> {
     }
 });
 
-config(IntSeq.class, (BridgeRouterBuild tile, IntSeq seq) -> {
+config(Point2[].class, (BridgeRouterBuild tile, Point2[] points) -> {
     tile.links.clear();
 
-    for(int i = 0; i + 1 < seq.size; i += 2){
-        int dx = seq.get(i);
-        int dy = seq.get(i + 1);
-
+    for(Point2 point : points){
         int pos = Point2.pack(
-            tile.tileX() + dx,
-            tile.tileY() + dy
+            tile.tileX() + point.x,
+            tile.tileY() + point.y
         );
 
         tile.links.add(pos);
@@ -569,15 +566,19 @@ protected boolean checkAccept(Building source){
         }
 
 @Override
-public IntSeq config(){
-    IntSeq seq = new IntSeq();
+public Point2[] config(){
+    Point2[] result = new Point2[links.size];
+
     for(int i = 0; i < links.size; i++){
         int pos = links.get(i);
-        seq.add(Point2.x(pos) - tile.x);
-        seq.add(Point2.y(pos) - tile.y);
+
+        result[i] = new Point2(
+            Point2.x(pos) - tile.x,
+            Point2.y(pos) - tile.y
+        );
     }
 
-    return seq;
+    return result;
 }
 
         @Override
