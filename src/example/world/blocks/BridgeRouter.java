@@ -581,6 +581,25 @@ public Point2[] config(){
     return result;
 }
 
+@Override
+public Object pointConfig(Object config, Cons<Point2> transformer){
+    if(!(config instanceof Point2[] points)){
+        return super.pointConfig(config, transformer);
+    }
+
+    Point2[] result = new Point2[points.length];
+
+    for(int i = 0; i < points.length; i++){
+        Point2 p = new Point2(points[i].x, points[i].y);
+
+        transformer.get(p);
+
+        result[i] = p;
+    }
+
+    return result;
+}
+
         @Override
         public byte version(){
             return 2;
