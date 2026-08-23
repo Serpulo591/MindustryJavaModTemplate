@@ -56,9 +56,9 @@ public class BridgeRouter extends Block {
         delayLandingConfig = true;
 
         //point2 config is relative
-        config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> tile.link = Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
+        config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> tile.links = Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
         //integer is not
-        config(Integer.class, (BridgeRouterBuild tile, Integer i) -> tile.link = i);
+        config(Integer.class, (BridgeRouterBuild tile, Integer i) -> tile.links = i);
     }
 
 @Override
