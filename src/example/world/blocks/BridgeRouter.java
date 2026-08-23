@@ -55,10 +55,14 @@ public class BridgeRouter extends Block {
         priority = TargetPriority.transport;
         delayLandingConfig = true;
 
-        //point2 config is relative
-        config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> tile.links = Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
-        //integer is not
-        config(Integer.class, (BridgeRouterBuild tile, Integer i) -> tile.links = i);
+config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> {
+    tile.links.clear();
+    tile.links.add(Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
+});
+config(Integer.class, (BridgeRouterBuild tile, Integer i) -> {
+    tile.links.clear();
+    if (i != -1) tile.links.add(i);
+});
     }
 
 @Override
