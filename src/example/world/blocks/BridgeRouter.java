@@ -57,11 +57,44 @@ public class BridgeRouter extends Block {
 
 config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> {
     tile.links.clear();
-    tile.links.add(Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
+    tile.links.add(Point2.pack(
+        i.x + tile.tileX(),
+        i.y + tile.tileY()
+    ));
 });
+
 config(Integer.class, (BridgeRouterBuild tile, Integer i) -> {
     tile.links.clear();
-    if (i != -1) tile.links.add(i);
+
+    if(i != -1){
+        tile.links.add(i);
+    }
+});
+
+config(IntSeq.class, (BridgeRouterBuild tile, IntSeq seq) -> {
+    tile.links.clear();
+
+    for(int i = 0; i + 1 < seq.size; i += 2){
+        int dx = seq.get(i);
+        int dy = seq.get(i + 1);
+
+        int pos = Point2.pack(
+            dx + tile.tileX(),
+            dy + tile.tileY()
+        );
+
+        Tile other = world.tile(pos);
+
+        if(other != null && linkValid(tile.tile, other)){
+            tile.links.add(pos);
+        }
+
+        if(tile.links.size >= maxLinks){
+            break;
+        }
+    }
+
+    tile.transportIndex = 0;
 });
     }
 
