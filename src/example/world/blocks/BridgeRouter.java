@@ -54,28 +54,6 @@ public class BridgeRouter extends Block {
         allowConfigInventory = false;
         priority = TargetPriority.transport;
         delayLandingConfig = true;
-
-        config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> {
-            tile.links.clear();
-            tile.links.add(Point2.pack(i.x + tile.tileX(), i.y + tile.tileY()));
-        });
-        config(Integer.class, (BridgeRouterBuild tile, Integer i) -> {
-            if(i == -1) {
-                tile.links.clear();
-            } else {
-                tile.links.clear();
-                tile.links.add(i);
-            }
-        });
-        config(IntSeq.class, (BridgeRouterBuild tile, IntSeq seq) -> {
-            tile.links.clear();
-            for(int j = 0; j < seq.size; j += 2){
-                int dx = seq.get(j);
-                int dy = seq.get(j + 1);
-                int pos = Point2.pack(dx + tile.tileX(), dy + tile.tileY());
-                tile.links.add(pos);
-            }
-        });
     }
 
 @Override
@@ -217,45 +195,41 @@ public void setBars() {
 
 @Override
 public boolean onConfigureBuildTapped(Building other) {
-    if (other == this) {
+    if(other == this){
         links.clear();
         transportIndex = 0;
-        // ★ 保存配置 ★
-        configure(links);
         return false;
     }
 
-    if (other instanceof BridgeRouterBuild b && linkValid(tile, other.tile)) {
+    if(other instanceof BridgeRouterBuild b && linkValid(tile, other.tile)){
+
         int myPos = tile.pos();
         int otherPos = other.tile.pos();
 
-        if (links.contains(otherPos)) {
+        if(links.contains(otherPos)){
             links.removeValue(otherPos);
-            if (transportIndex >= links.size) {
+
+            if(transportIndex >= links.size){
                 transportIndex = 0;
             }
-            // ★ 保存配置 ★
-            configure(links);
+
             return false;
         }
 
-        if (links.size >= maxLinks) {
+        if(links.size >= maxLinks){
             return false;
         }
 
-        // 如果对方连接了我，先清除对方的连接
-        if (b.links.contains(myPos)) {
+        if(b.links.contains(myPos)){
             b.links.removeValue(myPos);
-            if (b.transportIndex >= b.links.size) {
+
+            if(b.transportIndex >= b.links.size){
                 b.transportIndex = 0;
             }
-            // ★ 对方也保存配置 ★
-            b.configure(b.links);
         }
 
         links.add(otherPos);
-        // ★ 保存配置 ★
-        configure(links);
+
         return false;
     }
 
