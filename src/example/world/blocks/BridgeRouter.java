@@ -55,39 +55,26 @@ public class BridgeRouter extends Block {
         priority = TargetPriority.transport;
         delayLandingConfig = true;
 
-config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> {
-    tile.links.clear();
-    tile.links.add(Point2.pack(
-        i.x + tile.tileX(),
-        i.y + tile.tileY()
-    ));
-});
+config(IntSeq.class, (BridgeRouterBuild build, IntSeq seq) -> {
+    build.links.clear();
 
-config(Integer.class, (BridgeRouterBuild tile, Integer i) -> {
-    tile.links.clear();
+    for(int i = 0; i + 1 < seq.size; i += 2){
+        int dx = seq.get(i);
+        int dy = seq.get(i + 1);
 
-    if(i != -1){
-        tile.links.add(i);
-    }
-});
-
-config(Point2[].class, (BridgeRouterBuild tile, Point2[] points) -> {
-    tile.links.clear();
-
-    for(Point2 point : points){
         int pos = Point2.pack(
-            tile.tileX() + point.x,
-            tile.tileY() + point.y
+            build.tileX() + dx,
+            build.tileY() + dy
         );
 
-        tile.links.add(pos);
+        build.links.add(pos);
 
-        if(tile.links.size >= maxLinks){
+        if(build.links.size >= maxLinks){
             break;
         }
     }
 
-    tile.transportIndex = 0;
+    build.transportIndex = 0;
 });
     }
 
