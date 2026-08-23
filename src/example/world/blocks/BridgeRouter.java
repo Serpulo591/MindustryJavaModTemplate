@@ -55,26 +55,39 @@ public class BridgeRouter extends Block {
         priority = TargetPriority.transport;
         delayLandingConfig = true;
 
-config(IntSeq.class, (BridgeRouterBuild build, IntSeq seq) -> {
-    build.links.clear();
+config(Point2.class, (BridgeRouterBuild tile, Point2 i) -> {
+    tile.links.clear();
+    tile.links.add(Point2.pack(
+        i.x + tile.tileX(),
+        i.y + tile.tileY()
+    ));
+});
 
-    for(int i = 0; i + 1 < seq.size; i += 2){
-        int dx = seq.get(i);
-        int dy = seq.get(i + 1);
+config(Integer.class, (BridgeRouterBuild tile, Integer i) -> {
+    tile.links.clear();
 
+    if(i != -1){
+        tile.links.add(i);
+    }
+});
+
+config(Point2[].class, (BridgeRouterBuild tile, Point2[] points) -> {
+    tile.links.clear();
+
+    for(Point2 point : points){
         int pos = Point2.pack(
-            build.tileX() + dx,
-            build.tileY() + dy
+            tile.tileX() + point.x,
+            tile.tileY() + point.y
         );
 
-        build.links.add(pos);
+        tile.links.add(pos);
 
-        if(build.links.size >= maxLinks){
+        if(tile.links.size >= maxLinks){
             break;
         }
     }
 
-    build.transportIndex = 0;
+    tile.transportIndex = 0;
 });
     }
 
@@ -555,20 +568,16 @@ protected boolean checkAccept(Building source){
 @Override
 public Point2[] config(){
     Point2[] result = new Point2[links.size];
-
     for(int i = 0; i < links.size; i++){
         int pos = links.get(i);
-
         result[i] = new Point2(
             Point2.x(pos) - tile.x,
             Point2.y(pos) - tile.y
         );
     }
-
     return result;
 }
 
-@Override
 public Object pointConfig(Object config, Cons<Point2> transformer){
     if(!(config instanceof Point2[] points)){
         return super.pointConfig(config, transformer);
