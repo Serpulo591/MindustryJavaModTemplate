@@ -568,32 +568,30 @@ protected boolean checkAccept(Building source){
 @Override
 public Point2[] config(){
     Point2[] result = new Point2[links.size];
+
     for(int i = 0; i < links.size; i++){
         int pos = links.get(i);
+
         result[i] = new Point2(
             Point2.x(pos) - tile.x,
             Point2.y(pos) - tile.y
         );
     }
+
     return result;
 }
 
 public Object pointConfig(Object config, Cons<Point2> transformer){
-    if(!(config instanceof Point2[] points)){
-        return super.pointConfig(config, transformer);
+    if(config instanceof Point2[] points){
+        Point2[] result = new Point2[points.length];
+        for(int i = 0; i < points.length; i++){
+            Point2 p = new Point2(points[i].x, points[i].y);
+            transformer.get(p);
+            result[i] = p;
+        }
+        return result;
     }
-
-    Point2[] result = new Point2[points.length];
-
-    for(int i = 0; i < points.length; i++){
-        Point2 p = new Point2(points[i].x, points[i].y);
-
-        transformer.get(p);
-
-        result[i] = p;
-    }
-
-    return result;
+    return config;
 }
 
         @Override
