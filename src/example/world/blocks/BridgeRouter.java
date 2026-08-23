@@ -79,15 +79,11 @@ config(IntSeq.class, (BridgeRouterBuild tile, IntSeq seq) -> {
         int dy = seq.get(i + 1);
 
         int pos = Point2.pack(
-            dx + tile.tileX(),
-            dy + tile.tileY()
+            tile.tileX() + dx,
+            tile.tileY() + dy
         );
 
-        Tile other = world.tile(pos);
-
-        if(other != null && linkValid(tile.tile, other)){
-            tile.links.add(pos);
-        }
+        tile.links.add(pos);
 
         if(tile.links.size >= maxLinks){
             break;
